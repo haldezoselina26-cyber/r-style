@@ -656,3 +656,27 @@ $$('.shortsTop .tab').forEach(b=>b.addEventListener('click',()=>{subView='grid';
 /* v9.7: Ruby = 7 free questions a day (unlimited in Gold) */
 const RUBY_FREE9=7;
 rubyLeft=function(){if(S.vip)return Infinity;if(S.rubyDay.d!==today())S.rubyDay={d:today(),n:0};return Math.max(0,RUBY_FREE9-S.rubyDay.n);};
+
+/* ====================== v9.8: search people (not only your chats) ====================== */
+const DIRECTORY={
+  d1:{name:'Tamar Katz',handle:'tamar.k',followers:3210,following:180,score:87,color:'#0EA5E9',bio:'Minimal & beige',look:['👚','👖','👟']},
+  d2:{name:'Omar Haddad',handle:'omar.fits',followers:8420,following:240,score:89,color:'#16A34A',bio:'Street & sneakers',look:['🧢','👕','👟']},
+  d3:{name:'Léa Martin',handle:'lea.paris',followers:15400,following:310,score:93,color:'#BE185D',bio:'Parisian chic',look:['🧥','👗','👠']},
+  d4:{name:'Daniel Levy',handle:'dan.classic',followers:2210,following:95,score:84,color:'#7C3AED',bio:'Smart casual',look:['👔','👖','👞']},
+  d5:{name:'Noa Ben Ami',handle:'noa.modest',followers:6120,following:400,score:90,color:'#D97706',bio:'Modest & elegant',look:['🧣','🥻','👡']},
+  d6:{name:'Yasmine Saleh',handle:'yasmine.style',followers:11900,following:260,score:91,color:'#DB2777',bio:'Colorful everyday looks',look:['👚','👗','👟']}};
+function adoptUser(id){if(USERS[id]||!DIRECTORY[id])return;const d=DIRECTORY[id];USERS[id]={name:d.name,handle:d.handle,followers:d.followers,following:d.following,score:d.score,color:d.color,bio:d.bio};
+  if(!SAMPLE_SHORTS.some(s=>s.u===id))SAMPLE_SHORTS.push({id:'x_'+id,u:id,look:d.look,cap:d.bio,likes:Math.round(d.followers/6),g:Object.keys(DIRECTORY).indexOf(id)%GRADS.length,score:d.score,tags:[]});
+  (S.adopted=S.adopted||{})[id]=true;save();}
+Object.keys(S.adopted||{}).forEach(adoptUser);
+const _renderChatList98=renderChatList;
+renderChatList=function(){_renderChatList98();const q=($('#chatSearch').value||'').trim().toLowerCase().replace(/^@/,'');if(!q)return;
+  const all={...DIRECTORY,...USERS};const hits=Object.keys(all).filter(id=>!S.blocked[id]&&(all[id].name.toLowerCase().includes(q)||all[id].handle.includes(q)));
+  const box=$('#convs');box.insertAdjacentHTML('beforeend',`<div class="pplHead">${t('People')}</div>`+(hits.length?hits.map(id=>{const u=all[id];const on=!!S.following[id];
+    return `<div class="ppl"><button class="pplWho" data-pp="${id}"><span class="av" style="width:46px;height:46px;font-size:16px;background:${u.color}">${initials(u.name)}</span><span><b>${esc(u.name)}</b><small>@${esc(u.handle)} · ${fmt(u.followers)} ${t('Followers')}</small></span></button><button class="chip ${on?'':'on'}" data-ppf="${id}">${on?t('Followed'):t('Follow')}</button></div>`;}).join(''):`<p class="muted" style="text-align:center">${t('No results.')}</p>`));
+  const nr=box.querySelector(':scope > p.muted');if(nr&&hits.length&&!box.querySelector('.crow'))nr.remove();};
+$('#convs').addEventListener('click',e=>{const f=e.target.closest('[data-ppf]');if(f){e.stopPropagation();const id=f.dataset.ppf;adoptUser(id);toggleFollow(id);renderChatList();return;}
+  const w=e.target.closest('[data-pp]');if(w){e.stopPropagation();adoptUser(w.dataset.pp);openProfile(w.dataset.pp);}},true);
+$('#chatSearch').setAttribute('placeholder',t('Search a name or @username'));
+(function(){const T={'Followed':['Abonné','עוקב/ת','متابَع'],'People':['Personnes','אנשים','أشخاص'],'Search a name or @username':['Cherche un nom ou un @pseudo','חפש שם או @שם משתמש','ابحث عن اسم أو @اسم مستخدم']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
+$('#chatSearch').oninput=()=>renderChatList();
