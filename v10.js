@@ -272,3 +272,11 @@ const _save15=save;save=function(){_save15();if(blkSynced){clearTimeout(save._bt
 document.addEventListener('click',e=>{if(!SB||!ME_ID)return;let id=null,why='profile';
   if(e.target.closest('#repU'))id=profId;else if(e.target.closest('[data-ci="report"]')){id=roomInfo(ciId).uid;why='chat';}else if(e.target.closest('[data-cm="report"]')&&CALL.id){id=roomInfo(CALL.id).uid;why='call';}
   const u=id&&uuidOf(id);if(u)SB.from('reports').insert({target_type:'user',target_id:u,reason:why}).then(()=>{});},true);
+
+/* ====================== v16: automatic AI check of photos (profile photo + video messages) ====================== */
+(function(){const T={'This photo is not allowed on R-Style.':['Cette photo n\'est pas autorisée sur R-Style.','התמונה הזאת לא מותרת ב-R-Style.','هذه الصورة غير مسموح بها على R-Style.'],'Checking…':['Vérification…','בודק…','جارٍ التحقق…']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
+async function aiSafe(dataUrl){if(!AI||!AI_IMG||!dataUrl)return true;try{const r=await AI.json('Does this image contain nudity, sexual content, graphic violence, gore, drugs, weapons or hateful symbols? It is for an app used by teenagers. Return JSON only: {"safe":true|false}',{images:[dataUrlToBlob(dataUrl)]});return !(r&&r.safe===false);}catch(_){return true;}}
+/* profile photo: checked before it is saved on the server */
+const _pushPhoto16=pushPhoto;pushPhoto=async function(){const ph=me().photo||null;if(ph&&S.photoSynced!==ph&&!(await aiSafe(ph))){S.profile.photo=null;save();toast(t('This photo is not allowed on R-Style.'));if(typeof renderMe==='function')try{renderMe();}catch(_){}return;}return _pushPhoto16();};
+/* video messages: one image of the video is checked before sending */
+const _pushMsg16=pushMsg;pushMsg=function(id,m){if(m&&m.f==='me'&&m.vid&&!m._ok&&AI&&AI_IMG){(async()=>{toast(t('Checking…'));const fr=await videoFrame(m.vid);if(fr&&!(await aiSafe(fr.img))){openSheet(`<div class="verdict bad"><span></span><span><b>${t('Photo blocked')}</b><br>${t('This image is not allowed on R-Style.')}</span></div>`);return;}m._ok=1;_pushMsg16(id,m);})();return;}return _pushMsg16(id,m);};
