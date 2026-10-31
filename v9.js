@@ -769,3 +769,12 @@ applyLang();bdayCheck();if(current)show(current);
  const up=()=>{if(R&&!R.locked)finish(true);};mic.addEventListener('pointerup',up);mic.addEventListener('pointercancel',()=>{if(R&&!R.locked)finish(false);});
  mic.addEventListener('contextmenu',e=>e.preventDefault());
  const _close=closeRoom;closeRoom=function(){if(R)finish(false);return _close.apply(this,arguments);};})();
+
+/* v10.2 WhatsApp layout: one round button: mic when empty, send arrow when typing */
+(function(){const css=document.createElement('style');css.textContent=`
+#composer.empty #sendBtn{display:none}#composer:not(.empty) #micBtn{display:none}
+#composer.empty #micBtn{width:44px;height:44px;border-radius:50%;background:var(--accent,#E5202E);color:#fff}
+#composer.empty #micBtn svg{width:22px;height:22px}`;document.head.appendChild(css);
+ const inp=$('#msgInput'),c=$('#composer');const upd=()=>c.classList.toggle('empty',!inp.value.trim());
+ inp.addEventListener('input',upd);c.addEventListener('submit',()=>setTimeout(upd,0));
+ const _o=openRoom;openRoom=function(){const r=_o.apply(this,arguments);inp.value=inp.value||'';upd();return r;};upd();})();
