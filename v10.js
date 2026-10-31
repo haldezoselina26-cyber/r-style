@@ -280,3 +280,10 @@ async function aiSafe(dataUrl){if(!AI||!AI_IMG||!dataUrl)return true;try{const r
 const _pushPhoto16=pushPhoto;pushPhoto=async function(){const ph=me().photo||null;if(ph&&S.photoSynced!==ph&&!(await aiSafe(ph))){S.profile.photo=null;save();toast(t('This photo is not allowed on R-Style.'));if(typeof renderMe==='function')try{renderMe();}catch(_){}return;}return _pushPhoto16();};
 /* video messages: one image of the video is checked before sending */
 const _pushMsg16=pushMsg;pushMsg=function(id,m){if(m&&m.f==='me'&&m.vid&&!m._ok&&AI&&AI_IMG){(async()=>{toast(t('Checking…'));const fr=await videoFrame(m.vid);if(fr&&!(await aiSafe(fr.img))){openSheet(`<div class="verdict bad"><span></span><span><b>${t('Photo blocked')}</b><br>${t('This image is not allowed on R-Style.')}</span></div>`);return;}m._ok=1;_pushMsg16(id,m);})();return;}return _pushMsg16(id,m);};
+
+/* ====================== v17: delete account for real (Edge Function "delete-account") ====================== */
+document.addEventListener('click',async e=>{const b=e.target.closest('#delYes');if(!b||!SB||!ME_ID)return;e.stopImmediatePropagation();e.preventDefault();
+  b.disabled=true;b.innerHTML='<span class="spin"></span>';
+  try{const {data,error}=await SB.functions.invoke('delete-account',{body:{}});if(error||!data||!data.ok)throw error||new Error(data&&data.error);
+    try{await SB.auth.signOut();}catch(_){}Object.keys(localStorage).forEach(k=>{if(/^rstyle|^sb-/.test(k))localStorage.removeItem(k);});location.reload();
+  }catch(_){b.disabled=false;b.textContent=t('Yes, delete everything');toast(t('Not sent. Check your internet.'));}},true);
