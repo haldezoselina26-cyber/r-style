@@ -917,7 +917,8 @@ function ftLoop(){cancelAnimationFrame(FT.raf);const tg=ftTarget();if(!tg){FT.ra
   if(!layer){layer=document.createElement('div');layer.className='trk';tg.box.appendChild(layer);}tg.box.classList.add('tracking');
   const src=tg.src;const vw=src.videoWidth||src.naturalWidth,vh=src.videoHeight||src.naturalHeight;
   if(vw&&vh&&(!tg.still||!SNAP.face||SNAP.faceFor!==src.src)){const lm=ftDetect(src);if(tg.still){SNAP.face=lm;SNAP.faceFor=src.src;}
-    if(lm){const pts=tg.still?facePts(lm,coverMap(src,vw,vh,false)):smooth(facePts(lm,coverMap(src,vw,vh,tg.mirror)));drawParts(layer,parts.map(p=>partBox(pts,p)));}else{layer.innerHTML='';FT.sm=null;}}
+    FT.last=tg.still?null:lm;if(lm){const pts=tg.still?facePts(lm,coverMap(src,vw,vh,false)):smooth(facePts(lm,coverMap(src,vw,vh,tg.mirror)));drawParts(layer,parts.map(p=>partBox(pts,p)));}else{layer.innerHTML='';FT.sm=null;}}
+  if(!parts)FT.last=null;
   else if(tg.still&&SNAP.face){drawParts(layer,parts.map(p=>partBox(facePts(SNAP.face,coverMap(src,vw,vh,false)),p)));}
   FT.raf=requestAnimationFrame(ftLoop);}
 function ftStart(box){if(FT.failed){return;}if(!FT.lm&&box&&!box.querySelector('.ftLoad')){box.insertAdjacentHTML('beforeend',`<div class="ftLoad"><span class="spin"></span>${t('Loading face filters…')}</div>`);}
@@ -939,3 +940,67 @@ const _compose105=composeSnap;composeSnap=async function(){const f=filterById(SN
   for(const p of parts.map(q=>partBox(pts,q))){const svg=(OVL[p.svg]||'').replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" ');const o=new Image();await new Promise(r=>{o.onload=r;o.onerror=r;o.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);});
     const vb=(svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/)||[0,120,60]);const h=p.w*(+vb[2])/(+vb[1]);x.save();x.translate(p.x,p.y);x.rotate(p.rot);try{x.drawImage(o,-p.w/2,-h/2,p.w,h);}catch(_){}x.restore();}
   return c.toDataURL('image/jpeg',.8);};
+
+
+/* ====================== v10.6 VIDEO MESSAGES (camera with filters + gallery) ====================== */
+(function(){const T={'Video':['Vidéo','וידאו','فيديو'],'Tap to record · max 60 s':['Appuie pour filmer · max 60 s','לחץ כדי לצלם · עד 60 שניות','اضغط للتسجيل · 60 ث كحد أقصى'],'Video message':['Message vidéo','הודעת וידאו','رسالة فيديو'],
+ 'Video is too long (max 60 s)':['Vidéo trop longue (max 60 s)','הסרטון ארוך מדי (עד 60 שניות)','الفيديو طويل جدًا (60 ث كحد أقصى)'],'This video is too big (max 50 MB).':['Cette vidéo est trop lourde (max 50 Mo).','הסרטון גדול מדי (עד 50MB).','الفيديو كبير جدًا (حد أقصى 50 ميغابايت).']};
+ ['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});
+ const css=document.createElement('style');css.textContent=`
+#snap .shut.vid{border-color:#fff;background:transparent}#snap .shut.vid::after{content:"";position:absolute;inset:8px;border-radius:50%;background:#E5202E;transition:all .2s}
+#snap .shut.vid.rec::after{inset:22px;border-radius:8px}#snap .shut.vid.rec{border-color:#E5202E;animation:recPulse 1s infinite}
+@keyframes recPulse{50%{box-shadow:0 0 0 10px rgba(229,32,46,.25)}}
+#snap .rtime{position:absolute;top:calc(env(safe-area-inset-top) + 22px);left:50%;transform:translateX(-50%);z-index:6;background:#E5202E;color:#fff;font-weight:700;font-size:14px;padding:5px 12px;border-radius:14px;font-variant-numeric:tabular-nums}
+#snap .smodes button,#snap .smodes span{background:none;border:0;color:#fff;font:inherit;padding:0 0 2px;cursor:pointer}
+#snap video.sbase.pv{transform:none}
+.m.pic .vthumb{position:relative;display:block}.m .vthumb video{display:block;width:220px;max-width:62vw;border-radius:16px;background:#000;aspect-ratio:3/4;object-fit:cover}
+.m .vthumb .pl{position:absolute;inset:0;display:grid;place-items:center}.m .vthumb .pl i{width:46px;height:46px;border-radius:50%;background:rgba(0,0,0,.45);display:grid;place-items:center;color:#fff;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.m .vthumb .pl svg{width:20px;height:20px;margin-left:3px}.m .vthumb small{position:absolute;left:8px;bottom:8px;color:#fff;font-size:11px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.vidView{position:fixed;inset:0;z-index:9999;background:#000;display:grid;place-items:center}.vidView video{width:100%;height:100%;object-fit:contain}
+.vidView .x{position:absolute;top:calc(env(safe-area-inset-top) + 14px);right:14px;width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;display:grid;place-items:center;z-index:2;border:0}.vidView .x svg{width:20px;height:20px}`;document.head.appendChild(css);})();
+SNAP.mode='photo';
+const fmtSec=s=>'0:'+String(Math.min(59,Math.max(0,Math.floor(s)))).padStart(2,'0');
+function vidMime(){const L=['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];if(!window.MediaRecorder)return '';for(const m of L){try{if(MediaRecorder.isTypeSupported(m))return m;}catch(_){}}return '';}
+const SVGIMG={};function svgImg(k){if(SVGIMG[k])return SVGIMG[k];const svg=(OVL[k]||'').replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" ');const o=new Image();o.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);const vb=svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/)||[0,120,60];o._r=(+vb[2])/(+vb[1]);return SVGIMG[k]=o;}
+/* record: draw camera + filter + face pieces on a canvas, record the canvas (+ microphone) */
+async function startVidRec(){const v=$('#snapV');if(!v||!v.videoWidth){toast(t('The camera opens in the iPhone app. Choose a photo from your gallery.'));return;}
+  const W0=Math.min(720,v.videoWidth),H0=Math.round(W0*v.videoHeight/v.videoWidth);const c=document.createElement('canvas');c.width=W0;c.height=H0;const x=c.getContext('2d');
+  let mic=null;try{mic=await navigator.mediaDevices.getUserMedia({audio:true});}catch(_){}
+  const REC={c,x,mic,chunks:[],t0:Date.now(),raf:0};SNAP.rec=REC;
+  const draw=()=>{if(SNAP.rec!==REC)return;const f=filterById(SNAP.filter);x.save();x.translate(W0,0);x.scale(-1,1);try{x.filter=f.css&&f.css!=='none'?f.css:'none';}catch(_){}x.drawImage(v,0,0,W0,H0);x.restore();x.filter='none';
+    const parts=FACE[f.k];if(parts&&FT.last){const pts=facePts(FT.last,(a,b)=>({x:W0-a*W0,y:b*H0}));for(const p of parts.map(q=>partBox(pts,q))){const o=svgImg(p.svg);if(o.complete&&o.naturalWidth!==0||o.complete){const h=p.w*o._r;x.save();x.translate(p.x,p.y);x.rotate(p.rot);try{x.drawImage(o,-p.w/2,-h/2,p.w,h);}catch(_){}x.restore();}}}
+    const tm=$('#snap .rtime');const sec=(Date.now()-REC.t0)/1000;if(tm)tm.textContent=fmtSec(sec);if(sec>=60){stopVidRec();return;}REC.raf=requestAnimationFrame(draw);};draw();
+  let stream;try{stream=c.captureStream(30);}catch(_){stream=SNAP.stream.clone();}
+  if(mic)mic.getAudioTracks().forEach(tr=>stream.addTrack(tr));
+  const mime=vidMime();try{REC.mr=mime?new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:2500000}):new MediaRecorder(stream);}catch(_){REC.mr=new MediaRecorder(stream);}
+  REC.mr.ondataavailable=e=>{if(e.data&&e.data.size)REC.chunks.push(e.data);};
+  REC.mr.onstop=()=>{cancelAnimationFrame(REC.raf);if(mic)mic.getTracks().forEach(tr=>tr.stop());const blob=new Blob(REC.chunks,{type:(REC.mr.mimeType||mime||'video/webm').split(';')[0]});
+    SNAP.vidBlob=blob;SNAP.vid=URL.createObjectURL(blob);SNAP.vidDur=fmtSec((Date.now()-REC.t0)/1000);SNAP.rec=null;if(SNAP.stream){SNAP.stream.getTracks().forEach(z=>z.stop());SNAP.stream=null;}renderSnap();};
+  REC.mr.start(250);const sh=$('#snapShut');if(sh)sh.classList.add('rec');$('#snap').insertAdjacentHTML('beforeend','<div class="rtime">0:00</div>');
+  const ring=$('#snapRing');if(ring)ring.style.visibility='hidden';}
+function stopVidRec(){const R=SNAP.rec;if(!R||!R.mr||R.mr.state==='inactive')return;try{R.mr.stop();}catch(_){}}
+const _openSnap106=openSnap;openSnap=function(to){SNAP.vid=null;SNAP.vidBlob=null;SNAP.rec=null;return _openSnap106(to);};
+const _closeSnap106=closeSnap;closeSnap=function(){if(SNAP.rec){const R=SNAP.rec;SNAP.rec=null;try{R.mr.onstop=null;R.mr.stop();}catch(_){}cancelAnimationFrame(R.raf);if(R.mic)R.mic.getTracks().forEach(tr=>tr.stop());}return _closeSnap106();};
+const _renderSnap106=renderSnap;renderSnap=function(){const s=$('#snap');
+  if(SNAP.vid){const r=roomInfo(SNAP.to);s.innerHTML=`<video class="sbase pv" src="${SNAP.vid}" autoplay loop playsinline></video>
+     <button class="sx" id="snapX" aria-label="Close">${SV(ICONS.x)}</button>
+     <div class="ssend"><button class="sretake" id="snapRetake" aria-label="Retake">${SV(ICONS.x)}</button><button class="sgo" id="snapGo">${t('Send to {n}',{n:esc(firstName(r.name))})} ${SV('<path d="M4 12l16-8-6 16-2.5-6.5z"/>')}</button></div>`;
+    $('#snapX').onclick=closeSnap;$('#snapRetake').onclick=()=>{const m=SNAP.mode;openSnap(SNAP.to).then(()=>{});SNAP.mode=m;};
+    $('#snapGo').onclick=()=>{const to=SNAP.to;const m={f:'me',vid:SNAP.vid,vidBlob:SNAP.vidBlob,dur:SNAP.vidDur||''};SNAP.vid=null;closeSnap();pushMsg(to,m);};return;}
+  _renderSnap106();
+  const md=s.querySelector('.smodes');if(md&&!SNAP.img){const on=SNAP.mode;md.innerHTML=`<button id="snapGal">${t('Gallery')}</button><button data-sm="photo" class="${on==='photo'?'on':''}">${t('Photo')}</button><button data-sm="video" class="${on==='video'?'on':''}">${t('Video')}</button>`;
+    md.querySelectorAll('[data-sm]').forEach(b=>b.onclick=()=>{SNAP.mode=b.dataset.sm;renderSnap();});
+    $('#snapGal').onclick=async()=>{if(SNAP.mode==='video'){const fl=await pickFile('video/*');if(!fl)return;const url=URL.createObjectURL(fl);const fr=await videoFrame(url);
+        if(fr&&fr.dur>61){toast(t('Video is too long (max 60 s)'));return;}if(fl.size>50*1024*1024){toast(t('This video is too big (max 50 MB).'));return;}
+        if(SNAP.stream){SNAP.stream.getTracks().forEach(z=>z.stop());SNAP.stream=null;}SNAP.vidBlob=fl;SNAP.vid=url;SNAP.vidDur=fr?fmtSec(fr.dur):'';renderSnap();return;}
+      const fl=await pickFile('image/*');if(fl){SNAP.img=await downscale(await readFile(fl),1000,.85);if(SNAP.stream){SNAP.stream.getTracks().forEach(z=>z.stop());SNAP.stream=null;}renderSnap();}};
+    const sh=$('#snapShut');if(sh&&SNAP.mode==='video'){sh.classList.add('vid');sh.setAttribute('aria-label',t('Video'));sh.onclick=()=>{if(SNAP.rec)stopVidRec();else startVidRec();};
+      const fn=s.querySelector('.fname');if(fn&&!SNAP.stream)fn.textContent=t('Tap to record · max 60 s');}}};
+/* chat bubble + full-screen player */
+const _msgBody106=msgBody;msgBody=function(m){if(m.vid!==undefined||m.isVid){if(!m.vid)return `<span class="muted">${t('Video message')}…</span>`;
+  return `<span class="vthumb" data-vid="1"><video src="${m.vid}#t=0.1" preload="metadata" muted playsinline></video><span class="pl"><i>${SV('<path d="M7 4l13 8-13 8z" fill="currentColor"/>')}</i></span>${m.dur?`<small>${esc(m.dur)}</small>`:''}</span>`;}return _msgBody106(m);};
+const _renderMsgs106=renderMsgs;renderMsgs=function(){_renderMsgs106();$$('#msgs .m').forEach(el=>{if(el.querySelector('.vthumb'))el.classList.add('pic');});};
+document.addEventListener('click',e=>{const v=e.target.closest('#msgs .vthumb');if(!v)return;const el=v.closest('.m');const m=(S.chats[roomId]||[])[+el.dataset.k];if(!m||!m.vid)return;
+  const w=document.createElement('div');w.className='vidView';w.innerHTML=`<video src="${m.vid}" autoplay controls playsinline></video><button class="x" aria-label="Close">${SV(ICONS.x)}</button>`;document.body.appendChild(w);w.querySelector('.x').onclick=()=>w.remove();},true);
+/* don't keep big video files in the phone memory (only the link) */
+const _save106=save;save=function(){const strip=[];for(const id in S.chats)(S.chats[id]||[]).forEach(m=>{if(m.vidBlob){strip.push([m,m.vidBlob]);delete m.vidBlob;}});_save106();strip.forEach(([m,b])=>{if(!m.media)m.vidBlob=b;});};

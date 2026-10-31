@@ -74,9 +74,9 @@ async function syncMessages(){const {data}=await SB.from('messages').select('*')
   try{await signAll(Object.values(by).flat());}catch(_){}
   const unknown=Object.keys(by).filter(id=>!USERS[id]).map(uuidOf);if(unknown.length){const {data:ps}=await SB.from('profiles').select('*').in('id',unknown);(ps||[]).forEach(addReal);}}
 function toLocal(m){const mine=m.sender===ME_ID;const x={f:mine?'me':'them',ts:Date.parse(m.created_at),dbid:m.id,st:mine?(m.read_at?'read':'delivered'):undefined,read:!mine&&!!m.read_at};
-  const k=m.kind||'text';if(k==='text')x.t=m.body;else if(k==='voice'){x.voice=1;x.dur=m.body||'0:05';x.media=m.media;}else{x.media=m.media;x.once=k==='once';x.filter=x.once?null:m.body;x.img=x.once&&!m.media?'':(x.img||'');if(x.once&&!m.media)x.opened=true;}return x;}
+  const k=m.kind||'text';if(k==='text')x.t=m.body;else if(k==='voice'){x.voice=1;x.dur=m.body||'0:05';x.media=m.media;}else if(k==='video'){x.isVid=1;x.vid='';x.dur=m.body||'';x.media=m.media;}else{x.media=m.media;x.once=k==='once';x.filter=x.once?null:m.body;x.img=x.once&&!m.media?'':(x.img||'');if(x.once&&!m.media)x.opened=true;}return x;}
 async function signAll(list){const need=list.filter(x=>x.media&&!x.url);if(!need.length)return;
-  const {data}=await SB.storage.from('chat').createSignedUrls(need.map(x=>x.media),3600*6);(data||[]).forEach((d,i)=>{const x=need[i];if(d&&d.signedUrl){x.url=d.signedUrl;if(x.voice)x.a=d.signedUrl;else x.img=d.signedUrl;}});}
+  const {data}=await SB.storage.from('chat').createSignedUrls(need.map(x=>x.media),3600*6);(data||[]).forEach((d,i)=>{const x=need[i];if(d&&d.signedUrl){x.url=d.signedUrl;if(x.voice)x.a=d.signedUrl;else if(x.isVid)x.vid=d.signedUrl;else x.img=d.signedUrl;}});}
 function listen(){if(SBchan)SB.removeChannel(SBchan);
   SBchan=SB.channel('msgs-'+ME_ID)
    .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`receiver=eq.${ME_ID}`},async p=>{const m=p.new;const id=rid(m.sender);
@@ -93,15 +93,17 @@ async function markReadReal(id){const u=uuidOf(id);if(!u)return;await SB.from('m
 /* ---------- sending to a real friend ---------- */
 function hookPush(){const _push=pushMsg;
   pushMsg=function(id,m){const u=uuidOf(id);if(!u)return _push(id,m);
-    if(!m.t&&!m.img&&!m.a){toast(m.voice?t('Allow the microphone to send a real voice message.'):t('For now, only text, photos and voice with real friends.'));return;}
+    if(!m.t&&!m.img&&!m.a&&!m.vid){toast(m.voice?t('Allow the microphone to send a real voice message.'):t('For now, only text, photos and voice with real friends.'));return;}
     m.ts=Date.now();m.st='sent';(S.chats[id]=S.chats[id]||[]).push(m);bumpStreak(id);save();
     if(current==='room'&&roomId===id){renderMsgs();flyLast();burstSend();pop();}
     (async()=>{let row={receiver:u,body:m.t,kind:'text'};
-      if(m.img||m.a){const blob=dataUrlToBlob(m.img||m.a);const ext=m.a?((blob.type.includes('mp4')||blob.type.includes('aac'))?'m4a':'webm'):'jpg';const path=`${ME_ID}/${u}/${Date.now()}.${ext}`;
+      if(m.vid&&m.vidBlob){const blob=m.vidBlob;if(blob.size>50*1024*1024)return {error:{code:'big'}};const ext=/mp4|quicktime/.test(blob.type)?'mp4':'webm';const path=`${ME_ID}/${u}/${Date.now()}.${ext}`;
+        const up=await SB.storage.from('chat').upload(path,blob,{contentType:blob.type||'video/mp4'});if(up.error)return {error:up.error};m.media=path;delete m.vidBlob;row={receiver:u,kind:'video',media:path,body:m.dur||null};}
+      else if(m.img||m.a){const blob=dataUrlToBlob(m.img||m.a);const ext=m.a?((blob.type.includes('mp4')||blob.type.includes('aac'))?'m4a':'webm'):'jpg';const path=`${ME_ID}/${u}/${Date.now()}.${ext}`;
         const up=await SB.storage.from('chat').upload(path,blob,{contentType:blob.type||'application/octet-stream'});if(up.error)return {error:up.error};
         m.media=path;row=m.a?{receiver:u,kind:'voice',media:path,body:m.dur||null}:{receiver:u,kind:m.once?'once':'image',media:path,body:m.filter||null};}
       return SB.from('messages').insert(row).select().single();})().then(({data,error})=>{
-      if(error){m.st='sent';m.failed=true;toast(error.code==='42501'?t('You can only write to friends who follow you back.'):t('Not sent. Check your internet.'));}
+      if(error){m.st='sent';m.failed=true;toast(error.code==='42501'?t('You can only write to friends who follow you back.'):error.code==='big'?t('This video is too big (max 50 MB).'):t('Not sent. Check your internet.'));}
       else{m.dbid=data.id;m.st='delivered';}save();if(current==='room'&&roomId===id)renderMsgs();});};
   const _open=openRoom;openRoom=function(id){_open(id);if(uuidOf(id))markReadReal(id);};
   const _once=openOnce;openOnce=function(k){const id=roomId;const m=(S.chats[id]||[])[k];_once(k);
