@@ -284,6 +284,6 @@ const _pushMsg16=pushMsg;pushMsg=function(id,m){if(m&&m.f==='me'&&m.vid&&!m._ok&
 /* ====================== v17: delete account for real (Edge Function "delete-account") ====================== */
 document.addEventListener('click',async e=>{const b=e.target.closest('#delYes');if(!b||!SB||!ME_ID)return;e.stopImmediatePropagation();e.preventDefault();
   b.disabled=true;b.innerHTML='<span class="spin"></span>';
-  try{const {data,error}=await SB.functions.invoke('delete-account',{body:{}});if(error||!data||!data.ok)throw error||new Error(data&&data.error);
+  try{const {data,error}=await SB.functions.invoke('dynamic-action',{body:{}});if(error||!data||!data.ok)throw error||new Error(data&&data.error);
     try{await SB.auth.signOut();}catch(_){}Object.keys(localStorage).forEach(k=>{if(/^rstyle|^sb-/.test(k))localStorage.removeItem(k);});location.reload();
   }catch(_){b.disabled=false;b.textContent=t('Yes, delete everything');toast(t('Not sent. Check your internet.'));}},true);
