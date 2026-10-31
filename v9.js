@@ -1010,3 +1010,10 @@ const _save106=save;save=function(){const strip=[];for(const id in S.chats)(S.ch
  const _r=renderChatList;renderChatList=function(){_r.apply(this,arguments);const box=$('#convs');if(!box)return;
   const rows=[...box.querySelectorAll(':scope > .crow[data-room]')];if(rows.length<2)return;const anchor=document.createComment('rows');rows[0].before(anchor);
   rows.map((el,i)=>({el,i,ts:lastTs(el.dataset.room)})).sort((a,b)=>(b.ts-a.ts)||(a.i-b.i)).reverse().forEach(o=>anchor.after(o.el));anchor.remove();};})();
+
+/* v10.8 back button uses the latest closeRoom; keyboard: composer + typing bubble stay just above the keyboard */
+$('#roomBack').onclick=()=>closeRoom();
+(function(){const vv=window.visualViewport;if(!vv)return;const css=document.createElement('style');css.textContent=`#room .composer.floating{bottom:calc(var(--kb,0px) + env(safe-area-inset-bottom) + 14px);transition:bottom .15s}#room.kbOpen .composer.floating{bottom:calc(var(--kb,0px) + 8px)}#room .msgs{padding-bottom:calc(var(--kb,0px) + env(safe-area-inset-bottom) + 96px)}`;document.head.appendChild(css);
+ const upd=()=>{const kb=Math.max(0,window.innerHeight-vv.height-vv.offsetTop);const room=$('#room');const open=kb>80;room.style.setProperty('--kb',(open?kb:0)+'px');room.classList.toggle('kbOpen',open);
+   if(open){window.scrollTo(0,0);const b=$('#msgs');if(b)b.scrollTop=b.scrollHeight;}};
+ vv.addEventListener('resize',upd);vv.addEventListener('scroll',upd);$('#msgInput').addEventListener('focus',()=>setTimeout(upd,300));$('#msgInput').addEventListener('blur',()=>setTimeout(upd,300));})();

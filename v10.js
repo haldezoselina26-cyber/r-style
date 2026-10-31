@@ -82,7 +82,7 @@ function listen(){if(SBchan)SB.removeChannel(SBchan);
    .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`receiver=eq.${ME_ID}`},async p=>{const m=p.new;const id=rid(m.sender);
       if(!USERS[id]){const {data}=await SB.from('profiles').select('*').eq('id',m.sender).maybeSingle();if(data)addReal(data);}
       const a=S.chats[id]=S.chats[id]||[];if(a.some(x=>x.dbid===m.id))return;const here=current==='room'&&roomId===id;
-      const loc=Object.assign(toLocal(m),{read:here});try{await signAll([loc]);}catch(_){}a.push(loc);save();if(here){renderMsgs();markReadReal(id);}else if(current==='chat')renderChatList();
+      if(TYroom===id){clearTimeout(TYoff);typingRoom=null;}const loc=Object.assign(toLocal(m),{read:here});try{await signAll([loc]);}catch(_){}a.push(loc);save();if(here){renderMsgs();markReadReal(id);}else if(current==='chat')renderChatList();
       if(navigator.vibrate)try{navigator.vibrate(15);}catch(_){}})
    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'messages',filter:`sender=eq.${ME_ID}`},p=>{const m=p.new;const a=S.chats[rid(m.receiver)]||[];const x=a.find(y=>y.dbid===m.id);
       if(x&&(m.kind==='once')&&!m.media){x.opened=true;}
@@ -228,3 +228,20 @@ const _save12=save;save=function(){_save12();if(SB&&ME_ID&&S.photoSynced!==(me()
 let profAt=0;async function refreshProfiles(){if(!SB||!ME_ID||Date.now()-profAt<60000)return;profAt=Date.now();const ids=Object.keys(USERS).map(uuidOf).filter(Boolean);if(!ids.length)return;
   const {data}=await SB.from('profiles').select('*').in('id',ids);let ch=false;(data||[]).forEach(p=>{const u=USERS[rid(p.id)];if(u&&(u.photo||null)!==(p.photo||null)){ch=true;}addReal(p);});if(ch&&current==='chat')renderChatList();}
 const _renderChat12=renderChat;renderChat=function(){_renderChat12.apply(this,arguments);refreshProfiles();};
+
+/* ====================== v13: real "is typing…" bubble between friends ====================== */
+let TYch=null,TYroom=null,TYoff=0,TYsent=0;
+function tyName(a,b){return 'ty-'+[a,b].sort().join('-');}
+function tyShow(on){const id=TYroom;if(!id||current!=='room'||roomId!==id)return;const was=typingRoom===id;typingRoom=on?id:(typingRoom===id?null:typingRoom);
+  const sub=$('#roomName .sub');if(sub)sub.textContent=on?t('typing…'):t('online');
+  if(was!==on){renderMsgs();const b=$('#msgs');if(b)b.scrollTop=b.scrollHeight;}}
+function tyJoin(id){tyLeave();const u=uuidOf(id);if(!SB||!ME_ID||!u)return;TYroom=id;
+  TYch=SB.channel(tyName(ME_ID,u),{config:{broadcast:{self:false}}})
+   .on('broadcast',{event:'typing'},({payload})=>{if(!payload||payload.from!==u)return;clearTimeout(TYoff);if(payload.on){tyShow(true);TYoff=setTimeout(()=>tyShow(false),4000);}else tyShow(false);})
+   .subscribe();}
+function tyLeave(){if(TYch){try{TYsend(false);SB.removeChannel(TYch);}catch(_){}}TYch=null;if(TYroom&&typingRoom===TYroom)typingRoom=null;TYroom=null;clearTimeout(TYoff);}
+function TYsend(on){if(!TYch)return;try{TYch.send({type:'broadcast',event:'typing',payload:{from:ME_ID,on}});}catch(_){}}
+$('#msgInput').addEventListener('input',()=>{if(!TYch)return;const has=!!$('#msgInput').value.trim();if(!has){TYsent=0;TYsend(false);return;}if(Date.now()-TYsent>2000){TYsent=Date.now();TYsend(true);}});
+$('#composer').addEventListener('submit',()=>{TYsent=0;TYsend(false);});
+(function(){const _o=openRoom;openRoom=function(id){const r=_o.apply(this,arguments);if(uuidOf(id))tyJoin(id);else tyLeave();return r;};
+ const _c=closeRoom;closeRoom=function(){tyLeave();return _c.apply(this,arguments);};})();
