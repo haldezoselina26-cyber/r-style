@@ -943,3 +943,13 @@ body.gold #nav .npill{background:#2E2716}
 .ppl .pplWho{display:flex;align-items:center;gap:12px;flex:1;min-width:0;text-align:start;color:var(--fg)}
 .ppl .pplWho b{display:block;font-size:15px}.ppl .pplWho small{display:block;font-size:12.5px;color:var(--muted)}
 .ppl .crown{display:none}
+.cakeB svg{width:15px;height:15px;color:#E11D2E;vertical-align:-2px}
+body.gold .cakeB svg{color:#D4AF37}
+#bdayFx{position:absolute;inset:0;z-index:70;background:rgba(10,10,12,.72);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);display:grid;place-items:center;animation:fadein .3s}
+#bdayFx .bcard{width:80%;max-width:320px;background:var(--bg);color:var(--fg);border-radius:28px;padding:26px 22px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;animation:pkin .45s cubic-bezier(.2,.9,.3,1.3)}
+#bdayFx .bcard>svg{width:64px;height:64px;color:var(--accent)}
+#bdayFx h2{margin:4px 0 0;font-size:24px}#bdayFx p{margin:0 0 10px;color:var(--muted);font-size:15px;line-height:1.4}
+#bdayFx .bconf{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+#bdayFx .bconf i{position:absolute;top:-12px;width:8px;height:14px;border-radius:2px;animation:conf 2.6s linear infinite}
+@keyframes conf{to{transform:translateY(110vh) rotate(540deg)}}
+.ov-bday{top:2%;width:96%}

@@ -680,3 +680,47 @@ $('#convs').addEventListener('click',e=>{const f=e.target.closest('[data-ppf]');
 $('#chatSearch').setAttribute('placeholder',t('Search a name or @username'));
 (function(){const T={'Followed':['Abonné','עוקב/ת','متابَع'],'People':['Personnes','אנשים','أشخاص'],'Search a name or @username':['Cherche un nom ou un @pseudo','חפש שם או @שם משתמש','ابحث عن اسم أو @اسم مستخدم']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
 $('#chatSearch').oninput=()=>renderChatList();
+
+/* ====================== v9.9: birthday instead of age ====================== */
+ICONS.cake='<path d="M4 21h16v-7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2z"/><path d="M4 16c1.5 1 3 1 4 0s2.5-1 4 0 2.5 1 4 0 2.5-1 4 0M12 12V8M8 12V9M16 12V9"/><path d="M12 5.5c.8 0 1.2-.7 1.2-1.3S12 2 12 2s-1.2 1.6-1.2 2.2.4 1.3 1.2 1.3z"/>';
+function ageFrom(b){if(!b)return NaN;const d=new Date(b),n=new Date();let a=n.getFullYear()-d.getFullYear();const m=n.getMonth()-d.getMonth();if(m<0||(m===0&&n.getDate()<d.getDate()))a--;return a;}
+function mmdd(b){return b?String(b).slice(5,10):'';}
+function isBday(b){return !!b&&mmdd(b)===today().slice(5,10);}
+/* sign-up: date of birth */
+$('#suAge').oninput=e=>{D.birth=e.target.value;const a=ageFrom(D.birth);D.age=isNaN(a)?'':String(a);$('#ageErr').textContent=(D.birth&&(a<13||a>99))?t('You must be 13 or older.'):'';validate();};
+(function(){const old=$('#suNext').onclick;$('#suNext').onclick=function(){old();if(S.profile&&D.birth&&!S.profile.birth){S.profile.birth=D.birth;S.profile.age=ageFrom(D.birth);save();bdayCheck();}};})();
+/* demo: one friend has a birthday today */
+USERS.u3.birth='2010-'+today().slice(5,10);
+function friendBday(id){const u=USERS[id];return u&&isBday(u.birth);}
+/* birthday gift */
+function bdayCheck(){const p=me();if(!p.username)return;
+  if(S.bdayVip&&S.bdayVip!==today()){S.vip=false;S.bdayVip=null;save();applyTheme();}
+  if(!isBday(p.birth))return;
+  if(!S.vip){S.vip=true;S.bdayVip=today();if(!S.accent||S.accent==='#E11D2E')S.accent='#D4AF37';save();applyTheme();}
+  if(S.bdayShown!==today()){S.bdayShown=today();save();setTimeout(showBday,600);}}
+function showBday(){const gift=S.bdayVip===today()?t('Your gift: Gold Style all day long!'):t('Your gift: a birthday filter and a cake badge on your profile.');
+  const fx=document.createElement('div');fx.id='bdayFx';fx.innerHTML=`<div class="bconf">${Array.from({length:40},(_,i)=>`<i style="left:${Math.random()*100}%;animation-delay:${Math.random()*1.2}s;background:${['#E11D2E','#D4AF37','#7C3AED','#0EA5E9','#16A34A'][i%5]}"></i>`).join('')}</div>
+    <div class="bcard">${SV(ICONS.cake)}<h2>${t('Happy birthday {u}!',{u:'@'+esc(me().username)})}</h2><p>${gift}</p><button class="btn primary" id="bdayOk">${t('Thank you!')}</button></div>`;
+  $('#app').appendChild(fx);$('#bdayOk').onclick=()=>{fx.remove();if(current)show(current);};}
+/* cake badge on my profile + friends' rows */
+const _renderMe99=renderMe;renderMe=function(){_renderMe99();if(isBday(me().birth))$('#meHandle').insertAdjacentHTML('beforeend',` <span class="cakeB">${SV(ICONS.cake)}</span>`);};
+const _renderChatList99=renderChatList;renderChatList=function(){_renderChatList99();$$('#convs .crow[data-room]').forEach(r=>{if(friendBday(r.dataset.room)){const b=r.querySelector('.t b');if(b&&!b.querySelector('.cakeB'))b.insertAdjacentHTML('beforeend',` <span class="cakeB">${SV(ICONS.cake)}</span>`);const sm=r.querySelector('.t small');if(sm){sm.textContent=t('Birthday today! Wish them a happy birthday');sm.className='strong';}}});};
+/* birthday filter (on your birthday) */
+FILTERS.push({k:'bday',n:'Birthday',ov:'bday'});
+OVL.bday='<svg viewBox="0 0 120 70"><g><ellipse cx="22" cy="22" rx="12" ry="15" fill="#E11D2E"/><path d="M22 37v30" stroke="#fff" stroke-width="1.5"/><ellipse cx="98" cy="20" rx="12" ry="15" fill="#D4AF37"/><path d="M98 35v30" stroke="#fff" stroke-width="1.5"/><ellipse cx="60" cy="14" rx="10" ry="13" fill="#7C3AED"/><path d="M60 27v20" stroke="#fff" stroke-width="1.5"/></g></svg>';
+const _fringHTML=fringHTML;fringHTML=function(sel){let h=_fringHTML(sel);if(!isBday(me().birth))h=h.replace(/<button class="fc[^"]*" data-f9="bday"[\s\S]*?<\/button>/,'');return h;};
+/* contact info: birthday (day + month only) */
+const _openContact99=openContact;openContact=function(id){_openContact99(id);const u=USERS[roomInfo(id).uid];if(u&&u.birth){const d=new Date('2000-'+mmdd(u.birth));$('#ciBody .ciInfo')?.insertAdjacentHTML('beforeend',`<span class="muted">${SV(ICONS.cake,'style="width:14px;height:14px;vertical-align:-2px"')} ${d.toLocaleDateString(S.lang||'en',{day:'numeric',month:'long'})}</span>`);}};
+/* settings: add birthday if missing (existing accounts) */
+const _renderSettings99=renderSettings;renderSettings=function(){_renderSettings99();const p=me();const acc=$('#setBody .srow');
+  if(acc)acc.insertAdjacentHTML('afterend',`<div class="srow"><div class="l"><b>${t('Birthday')}</b>${p.birth?`<small class="muted">${new Date(p.birth).toLocaleDateString(S.lang||'en',{day:'numeric',month:'long',year:'numeric'})}</small>`:''}</div>${p.birth?'':`<input type="date" id="setBirth" class="sel">`}</div>`);
+  const sb=$('#setBirth');if(sb)sb.onchange=e=>{const a=ageFrom(e.target.value);if(isNaN(a)||a<13||a>99){toast(t('You must be 13 or older.'));return;}S.profile.birth=e.target.value;S.profile.age=a;save();renderSettings();bdayCheck();};};
+/* real subscription replaces the birthday day */
+(function(){const b=$('#vipActivate');const old=b.onclick;b.onclick=function(){S.bdayVip=null;old();};})();
+(function(){const T={'When is your birthday?':['C\'est quand ton anniversaire ?','מתי יום ההולדת שלך?','متى عيد ميلادك؟'],'You must be 13 or older. On your birthday you get a surprise.':['Tu dois avoir 13 ans ou plus. Le jour de ton anniversaire, tu as une surprise.','צריך להיות בן/בת 13 ומעלה. ביום ההולדת מחכה לך הפתעה.','يجب أن يكون عمرك 13 عامًا أو أكثر. في عيد ميلادك تنتظرك مفاجأة.'],
+ 'You must be 13 or older.':['Tu dois avoir 13 ans ou plus.','צריך להיות בן/בת 13 ומעלה.','يجب أن يكون عمرك 13 عامًا أو أكثر.'],'Birthday':['Anniversaire','יום הולדת','عيد الميلاد'],
+ 'Happy birthday {u}!':['Joyeux anniversaire {u} !','יום הולדת שמח {u}!','عيد ميلاد سعيد {u}!'],'Thank you!':['Merci !','תודה!','شكرًا!'],
+ 'Your gift: Gold Style all day long!':['Ton cadeau : Gold Style toute la journée !','המתנה שלך: Gold Style כל היום!','هديتك: Gold Style طوال اليوم!'],
+ 'Your gift: a birthday filter and a cake badge on your profile.':['Ton cadeau : un filtre anniversaire et un badge gâteau sur ton profil.','המתנה שלך: פילטר יום הולדת ותג עוגה בפרופיל.','هديتك: فلتر عيد ميلاد وشارة كعكة في ملفك.'],
+ 'Birthday today! Wish them a happy birthday':['C\'est son anniversaire ! Souhaite-lui','יום הולדת היום! תאחל/י מזל טוב','عيد ميلاده اليوم! هنّئه']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
+applyLang();bdayCheck();if(current)show(current);
