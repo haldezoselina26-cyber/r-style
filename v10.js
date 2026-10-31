@@ -256,3 +256,19 @@ function makeGemini(){const G=async function(msgs,opts={}){const image=opts.imag
   G.limits=async()=>({images:true});G.gemini=true;return G;}
 function enableGemini(){if(!REAL||!SB||!ME_ID||(AI&&AI.gemini))return;AI=makeGemini();AI_IMG=true;}
 (function(){const _after=afterLogin;afterLogin=async function(){await _after();enableGemini();};})();
+
+/* ====================== v15: block + report saved on the server ====================== */
+let blkSynced=null;
+async function pullBlocks(){if(!SB||!ME_ID)return;const {data,error}=await SB.from('blocks').select('blocked').eq('blocker',ME_ID);if(error)return;
+  Object.keys(S.blocked).forEach(k=>{if(k.startsWith('r_')&&!blkSynced)delete S.blocked[k];});(data||[]).forEach(b=>{S.blocked[rid(b.blocked)]=true;});
+  blkSynced=new Set(Object.keys(S.blocked).filter(k=>k.startsWith('r_')&&S.blocked[k]));save();if(current==='chat')renderChatList();}
+async function pushBlocks(){if(!SB||!ME_ID||!blkSynced)return;const now=new Set(Object.keys(S.blocked).filter(k=>k.startsWith('r_')&&S.blocked[k]));
+  const add=[...now].filter(k=>!blkSynced.has(k)),del=[...blkSynced].filter(k=>!now.has(k));if(!add.length&&!del.length)return;blkSynced=now;
+  if(add.length)await SB.from('blocks').insert(add.map(k=>({blocked:uuidOf(k)})));
+  for(const k of del)await SB.from('blocks').delete().eq('blocker',ME_ID).eq('blocked',uuidOf(k));
+  if(add.length&&current==='shorts')_rerender();}
+const _save15=save;save=function(){_save15();if(blkSynced){clearTimeout(save._bt);save._bt=setTimeout(pushBlocks,500);}};
+(function(){const _after=afterLogin;afterLogin=async function(){await _after();await pullBlocks();};})();
+document.addEventListener('click',e=>{if(!SB||!ME_ID)return;let id=null,why='profile';
+  if(e.target.closest('#repU'))id=profId;else if(e.target.closest('[data-ci="report"]')){id=roomInfo(ciId).uid;why='chat';}else if(e.target.closest('[data-cm="report"]')&&CALL.id){id=roomInfo(CALL.id).uid;why='call';}
+  const u=id&&uuidOf(id);if(u)SB.from('reports').insert({target_type:'user',target_id:u,reason:why}).then(()=>{});},true);
