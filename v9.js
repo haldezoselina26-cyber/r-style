@@ -1004,3 +1004,9 @@ document.addEventListener('click',e=>{const v=e.target.closest('#msgs .vthumb');
   const w=document.createElement('div');w.className='vidView';w.innerHTML=`<video src="${m.vid}" autoplay controls playsinline></video><button class="x" aria-label="Close">${SV(ICONS.x)}</button>`;document.body.appendChild(w);w.querySelector('.x').onclick=()=>w.remove();},true);
 /* don't keep big video files in the phone memory (only the link) */
 const _save106=save;save=function(){const strip=[];for(const id in S.chats)(S.chats[id]||[]).forEach(m=>{if(m.vidBlob){strip.push([m,m.vidBlob]);delete m.vidBlob;}});_save106();strip.forEach(([m,b])=>{if(!m.media)m.vidBlob=b;});};
+
+/* v10.7 chat list: the person you talked to last is at the top */
+(function(){const lastTs=id=>{const a=S.chats[id]||[];for(let i=a.length-1;i>=0;i--){if(a[i].ts)return a[i].ts;}return a.length?1:0;};
+ const _r=renderChatList;renderChatList=function(){_r.apply(this,arguments);const box=$('#convs');if(!box)return;
+  const rows=[...box.querySelectorAll(':scope > .crow[data-room]')];if(rows.length<2)return;const anchor=document.createComment('rows');rows[0].before(anchor);
+  rows.map((el,i)=>({el,i,ts:lastTs(el.dataset.room)})).sort((a,b)=>(b.ts-a.ts)||(a.i-b.i)).reverse().forEach(o=>anchor.after(o.el));anchor.remove();};})();

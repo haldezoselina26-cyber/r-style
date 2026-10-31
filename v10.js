@@ -217,3 +217,14 @@ openComments=function(id){const p=REALPOSTS.find(x=>x.id===id);if(!p||!SB)return
 const _renderSettings11=renderSettings;renderSettings=function(){_renderSettings11();const tg=$('#tgPriv');if(tg&&SB&&ME_ID){const old=tg.onclick;tg.onclick=()=>{old();SB.from('profiles').update({private:!!S.profile.private}).eq('id',ME_ID).then(()=>{});};}};
 /* load posts after login */
 (function(){const _after=afterLogin;afterLogin=async function(){await _after();await loadPosts(true);if(current==='shorts')_rerender();};})();
+
+/* ====================== v12: profile photos on the server ====================== */
+const _addReal12=addReal;addReal=function(p){const id=_addReal12(p);if(USERS[id]){USERS[id].photo=p.photo||null;USERS[id].name=p.username||USERS[id].name;USERS[id].handle=p.username||USERS[id].handle;}return id;};
+const _avHTML12=avHTML;avHTML=function(u,size){const x=USERS[u];if(u!=='me'&&x&&x.photo){const st=`width:${size}px;height:${size}px;font-size:${Math.round(size*.36)}px;`;return `<span class="av" style="${st}background:#333 center/cover;background-image:url(${x.photo})">${x.crown?'<span class="crown">👑</span>':''}</span>`;}return _avHTML12(u,size);};
+async function pushPhoto(){if(!SB||!ME_ID)return;const ph=me().photo||null;if(S.photoSynced===ph)return;const {error}=await SB.from('profiles').update({photo:ph}).eq('id',ME_ID);if(!error){S.photoSynced=ph;save();}}
+(function(){const _after=afterLogin;afterLogin=async function(){await _after();pushPhoto();};})();
+const _save12=save;save=function(){_save12();if(SB&&ME_ID&&S.photoSynced!==(me().photo||null)){clearTimeout(save._pt);save._pt=setTimeout(pushPhoto,800);}};
+/* refresh friends' photos/names every time the chat list opens (max once a minute) */
+let profAt=0;async function refreshProfiles(){if(!SB||!ME_ID||Date.now()-profAt<60000)return;profAt=Date.now();const ids=Object.keys(USERS).map(uuidOf).filter(Boolean);if(!ids.length)return;
+  const {data}=await SB.from('profiles').select('*').in('id',ids);let ch=false;(data||[]).forEach(p=>{const u=USERS[rid(p.id)];if(u&&(u.photo||null)!==(p.photo||null)){ch=true;}addReal(p);});if(ch&&current==='chat')renderChatList();}
+const _renderChat12=renderChat;renderChat=function(){_renderChat12.apply(this,arguments);refreshProfiles();};
