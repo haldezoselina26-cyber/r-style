@@ -1,0 +1,658 @@
+'use strict';
+/* ====================== v9: chat redesign, calls, filters, contact info, cube stories, Gold ad, Ruby modest ====================== */
+
+/* ---------- icons ---------- */
+Object.assign(ICONS,{
+ phone:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>',
+ video:'<rect x="3" y="6" width="13" height="12" rx="3"/><path d="M16 10l5-3v10l-5-3z"/>',
+ micoff:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M4 3l16 18"/>',
+ speaker:'<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>',
+ flip:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><path d="M9 13a3 3 0 0 1 5-2.2M15 13a3 3 0 0 1-5 2.2"/>',
+ lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+ shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+ eyeoff:'<path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="12" cy="12" r="2.5"/><path d="M4 4l16 16"/>',
+ timer:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/>',
+ palette:'<path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2s-1-1.5-1-2.5 1-1.5 2-1.5h2a4 4 0 0 0 4-4c0-4.4-4-8-9-8z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/>',
+ download:'<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+ list:'<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
+ export:'<path d="M12 15V4M7 9l5-5 5 5M5 14v6h14v-6"/>',
+ trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+ block:'<circle cx="12" cy="12" r="8"/><path d="M6.5 6.5l11 11"/>',
+ flag:'<path d="M5 21V4h11l-1.5 4L16 12H5"/>',
+ bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+ filters:'<circle cx="9" cy="10" r="5"/><circle cx="15" cy="10" r="5"/><circle cx="12" cy="15" r="5"/>',
+ adduser:'<circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.4 3-5 6-5s5.4 1.6 6 5M18 8v6M15 11h6"/>',
+ pin:'<path d="M9 3h6l-1 6 3 3H7l3-3zM12 12v9"/>',
+ mute:'<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l4 6M21 9l-4 6"/>',
+ x:'<path d="M6 6l12 12M18 6L6 18"/>',
+ none:'<circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/>',
+ info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>'
+});
+const HANG='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 14.5c4.8-4.7 13.2-4.7 18 0l-2.4 2.4-3.4-1.6V12.8a12 12 0 0 0-6.4 0v2.5l-3.4 1.6z"/></svg>';
+const TICK1='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9l4 4 8-10"/></svg>';
+const TICK2='<svg viewBox="0 0 26 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 9l4 4 8-10"/><path d="M10 11l2 2 8-10"/></svg>';
+
+/* ---------- translations for the new texts (fr / he / ar; other languages are translated by Ruby) ---------- */
+(function(){const T={
+ 'None':['Aucun','בלי','بدون'],'Vintage':['Vintage','וינטג\'','عتيق'],'B&W':['Noir & blanc','שחור-לבן','أبيض وأسود'],'Warm':['Chaud','חם','دافئ'],'Cool':['Froid','קר','بارد'],
+ 'Crown':['Couronne','כתר','تاج'],'Puppy':['Chiot','כלבלב','جرو'],'Hearts':['Cœurs','לבבות','قلوب'],'Sparkles':['Paillettes','נצנצים','لمعان'],'Glasses':['Lunettes','משקפיים','نظارات'],'Hat':['Chapeau','כובע','قبعة'],'Earrings':['Boucles d\'oreilles','עגילים','أقراط'],'Make-up':['Maquillage','איפור','مكياج'],'Date frame':['Cadre date','מסגרת תאריך','إطار التاريخ'],'R-Style frame':['Cadre R-Style','מסגרת R-Style','إطار R-Style'],
+ 'This filter is for Gold members':['Ce filtre est réservé aux membres Gold','הפילטר הזה רק למשתמשי Gold','هذا الفلتر لأعضاء Gold فقط'],
+ 'online':['en ligne','מחובר/ת','متصل'],
+ 'Calls are only between friends who follow each other.':['Les appels, c\'est seulement entre amis qui se suivent.','שיחות רק בין חברים שעוקבים אחד אחרי השני.','المكالمات فقط بين الأصدقاء الذين يتابعون بعضهم.'],
+ 'Calling…':['Appel…','מתקשר…','جارٍ الاتصال…'],
+ 'Mute':['Muet','השתק','كتم'],'Speaker':['Haut-parleur','רמקול','مكبر الصوت'],'Hang up':['Raccrocher','נתק','إنهاء'],'More':['Plus','עוד','المزيد'],
+ 'Video':['Vidéo','וידאו','فيديو'],'Add':['Ajouter','הוסף','إضافة'],'Filters':['Filtres','פילטרים','فلاتر'],'Report':['Signaler','דווח','إبلاغ'],
+ 'Swipe to change filter':['Glisse pour changer de filtre','החלק כדי להחליף פילטר','اسحب لتغيير الفلتر'],
+ 'Gold filter':['Filtre Gold','פילטר Gold','فلتر Gold'],
+ 'Up to 8 people · up to 32 when a Gold member starts the call':['Jusqu\'à 8 personnes · jusqu\'à 32 si un membre Gold lance l\'appel','עד 8 אנשים · עד 32 כשמשתמש Gold פותח את השיחה','حتى 8 أشخاص · حتى 32 عندما يبدأ عضو Gold المكالمة'],
+ 'Limit reached':['Limite atteinte','הגעת למקסימום','تم الوصول للحد'],
+ 'Add to the call':['Ajouter à l\'appel','הוסף לשיחה','أضف إلى المكالمة'],
+ 'Demo: real calls work in the iPhone app.':['Démo : les vrais appels marchent dans l\'app iPhone.','דמו: שיחות אמיתיות יעבדו באפליקציה לאייפון.','عرض: المكالمات الحقيقية تعمل في تطبيق الآيفون.'],
+ 'Call ended':['Appel terminé','השיחה הסתיימה','انتهت المكالمة'],
+ 'Gallery':['Galerie','גלריה','المعرض'],'Photo':['Photo','תמונה','صورة'],
+ 'View once':['Vue unique','צפייה אחת','عرض مرة واحدة'],
+ 'Send to {n}':['Envoyer à {n}','שלח ל-{n}','إرسال إلى {n}'],
+ 'Photo · view once':['Photo · vue unique','תמונה · צפייה אחת','صورة · عرض مرة واحدة'],
+ 'Opened':['Ouverte','נפתחה','تم فتحها'],
+ 'The camera opens in the iPhone app. Choose a photo from your gallery.':['La caméra s\'ouvre dans l\'app iPhone. Choisis une photo de ta galerie.','המצלמה נפתחת באפליקציה לאייפון. בחר תמונה מהגלריה.','الكاميرا تعمل في تطبيق الآيفون. اختر صورة من المعرض.'],
+ 'Sent':['Envoyé','נשלח','أُرسلت'],'Delivered':['Arrivé','הגיע','وصلت'],'Read':['Lu','נקרא','مقروءة'],
+ 'typing…':['écrit…','מקליד/ה…','يكتب…'],
+ 'Recording… tap to send':['Enregistrement… appuie pour envoyer','מקליט… לחץ כדי לשלוח','جارٍ التسجيل… اضغط للإرسال'],
+ 'doesn\'t see that you read it':['ne voit pas que tu as lu','לא רואה שקראת','لا يرى أنك قرأت'],
+ '{n} new messages':['{n} nouveaux messages','{n} הודעות חדשות','{n} رسائل جديدة'],
+ 'Open':['Ouvrir','פתח','فتح'],'Mark as read':['Marquer comme lu','סמן כנקרא','تعليم كمقروء'],'Pin':['Épingler','הצמד','تثبيت'],'Unpin':['Désépingler','בטל הצמדה','إلغاء التثبيت'],'Silence':['Silencieux','השתק','كتم الإشعارات'],'Unmute':['Réactiver le son','בטל השתקה','إلغاء الكتم'],
+ 'Call':['Appeler','התקשר','اتصال'],'Search':['Rechercher','חיפוש','بحث'],
+ 'Media, links and docs':['Médias, liens et documents','מדיה, קישורים ומסמכים','الوسائط والروابط والمستندات'],
+ 'Starred messages':['Messages importants','הודעות שמורות','الرسائل المميزة'],
+ 'Notifications':['Notifications','התראות','الإشعارات'],
+ 'Chat theme':['Thème de la discussion','ערכת נושא לצ\'אט','سمة الدردشة'],
+ 'Save photos':['Enregistrer les photos','שמירת תמונות','حفظ الصور'],
+ 'Disappearing messages':['Messages éphémères','הודעות נעלמות','الرسائل المؤقتة'],
+ 'Off':['Désactivés','כבוי','إيقاف'],'24 hours':['24 heures','24 שעות','24 ساعة'],'7 days':['7 jours','7 ימים','7 أيام'],
+ 'Lock chat':['Verrouiller la discussion','נעילת צ\'אט','قفل الدردشة'],
+ 'Restricted chat':['Discussion restreinte','צ\'אט מוגבל','دردشة مقيدة'],
+ 'Encryption':['Chiffrement','הצפנה','التشفير'],'Messages protected':['Messages protégés','ההודעות מוגנות','الرسائل محمية'],
+ 'Contact details':['Détails du contact','פרטי איש הקשר','تفاصيل جهة الاتصال'],
+ 'On R-Style since {d}':['Sur R-Style depuis {d}','ב-R-Style מאז {d}','على R-Style منذ {d}'],
+ '{n} groups in common':['{n} groupes en commun','{n} קבוצות משותפות','{n} مجموعات مشتركة'],
+ 'Only groups you are in too.':['Seulement les groupes où tu es aussi.','רק קבוצות שגם אתה בהן.','فقط المجموعات التي أنت فيها أيضًا.'],
+ 'No groups in common':['Aucun groupe en commun','אין קבוצות משותפות','لا توجد مجموعات مشتركة'],
+ 'Share contact':['Partager le contact','שתף איש קשר','مشاركة جهة الاتصال'],
+ 'Add to favorites':['Ajouter aux favoris','הוסף למועדפים','إضافة للمفضلة'],'Remove from favorites':['Retirer des favoris','הסר ממועדפים','إزالة من المفضلة'],
+ 'Add to a list':['Ajouter à une liste','הוסף לרשימה','إضافة إلى قائمة'],
+ 'Export chat':['Exporter la discussion','ייצוא הצ\'אט','تصدير الدردشة'],
+ 'Clear chat':['Effacer la discussion','מחק את הצ\'אט','مسح الدردشة'],
+ 'Block {n}':['Bloquer {n}','חסום את {n}','حظر {n}'],'Report {n}':['Signaler {n}','דווח על {n}','الإبلاغ عن {n}'],
+ 'Always a gradient: choose your color. Only for you and {n}.':['Toujours un dégradé, choisis ta couleur. Seulement pour toi et {n}.','תמיד דגרדה, בחר צבע. רק לך ול-{n}.','دائمًا تدرّج: اختر لونك. لك ولـ{n} فقط.'],
+ 'Apply':['Appliquer','החל','تطبيق'],
+ 'Classic':['Classique','קלאסי','كلاسيكي'],'Lavender':['Lavande','לבנדר','لافندر'],'Ocean':['Océan','אוקיינוס','محيط'],'Sunset':['Coucher de soleil','שקיעה','غروب'],'Forest':['Forêt','יער','غابة'],'Burgundy':['Bordeaux','בורדו','عنابي'],'Peach':['Pêche','אפרסק','خوخي'],'Night':['Nuit','לילה','ليل'],
+ 'No starred messages yet. Long-press a message to star it.':['Pas encore de messages importants. Appuie longtemps sur un message.','אין עדיין הודעות שמורות. לחץ לחיצה ארוכה על הודעה.','لا توجد رسائل مميزة بعد. اضغط مطولًا على رسالة.'],
+ 'Star':['Important','שמור','تمييز'],
+ 'No media yet':['Pas encore de médias','אין עדיין מדיה','لا توجد وسائط بعد'],
+ 'Chat cleared':['Discussion effacée','הצ\'אט נמחק','تم مسح الدردشة'],
+ 'Clear all messages with {n}?':['Effacer tous les messages avec {n} ?','למחוק את כל ההודעות עם {n}?','مسح كل الرسائل مع {n}؟'],
+ 'Your messages are protected. In the iPhone app, only you and {n} can read them.':['Tes messages sont protégés. Dans l\'app iPhone, seuls toi et {n} pourrez les lire.','ההודעות שלך מוגנות. באפליקציה לאייפון רק אתה ו-{n} תוכלו לקרוא אותן.','رسائلك محمية. في تطبيق الآيفون، أنت و{n} فقط يمكنكما قراءتها.'],
+ 'Locked chats open with Face ID in the iPhone app.':['Les discussions verrouillées s\'ouvrent avec Face ID dans l\'app iPhone.','צ\'אטים נעולים נפתחים עם Face ID באפליקציה לאייפון.','الدردشات المقفلة تفتح بـ Face ID في تطبيق الآيفون.'],
+ 'Restricted: {n} can\'t see when you\'re online or read their messages.':['Restreinte : {n} ne voit pas quand tu es en ligne ni quand tu lis.','מוגבל: {n} לא רואה מתי אתה מחובר או קורא.','مقيدة: لا يرى {n} متى تكون متصلًا أو تقرأ.'],
+ 'Friends':['Amis','חברים','أصدقاء'],'Family':['Famille','משפחה','العائلة'],'Style squad':['Team style','צוות סטייל','فريق الستايل'],
+ 'Added to {l}':['Ajouté à {l}','נוסף ל-{l}','أضيف إلى {l}'],
+ 'Chat exported':['Discussion exportée','הצ\'אט יוצא','تم تصدير الدردشة'],
+ 'Gold Style · sponsored':['Gold Style · sponsorisé','Gold Style · ממומן','Gold Style · إعلان'],
+ 'DAILY CHALLENGE':['DÉFI DU JOUR','אתגר היום','تحدي اليوم'],
+ 'Your friends are playing «{x}».':['Tes amies jouent au défi « {x} ».','החברים שלך משחקים באתגר «{x}».','أصدقاؤك يلعبون تحدي «{x}».'],
+ 'A theme every day chosen by Ruby. For Gold members.':['Un thème par jour choisi par Ruby. Réservé aux membres Gold.','נושא כל יום שרובי בוחרת. רק למשתמשי Gold.','موضوع كل يوم تختاره روبي. لأعضاء Gold.'],
+ 'Try Gold · 7 days free':['Essayer Gold · 7 jours offerts','נסה Gold · 7 ימים חינם','جرّب Gold · 7 أيام مجانًا'],
+ 'You can skip in {n}':['Tu pourras passer dans {n}','אפשר לדלג בעוד {n}','يمكنك التخطي بعد {n}'],
+ 'Swipe up to skip':['Glisse vers le haut pour passer','החלק למעלה כדי לדלג','اسحب للأعلى للتخطي'],
+ 'You wear mostly **long** clothes. Shall I keep this style?':['Tu portes surtout du **long**. Je garde ce style ?','את/ה לובש/ת בעיקר בגדים **ארוכים**. לשמור על הסגנון הזה?','ترتدي غالبًا ملابس **طويلة**. هل أحافظ على هذا الأسلوب؟'],
+ 'Yes':['Oui','כן','نعم'],'Sometimes':['Parfois','לפעמים','أحيانًا'],'No thanks':['Non merci','לא תודה','لا شكرًا'],
+ 'Noted! Changeable in Settings › My style.':['Noté ! Modifiable dans Réglages › Mon style.','רשמתי! אפשר לשנות בהגדרות › הסגנון שלי.','تم! يمكن تغييره في الإعدادات › أسلوبي.'],
+ 'My style':['Mon style','הסגנון שלי','أسلوبي'],'Modest outfits':['Tenues pudiques','לבוש צנוע','ملابس محتشمة'],
+ 'Always':['Toujours','תמיד','دائمًا'],'Never':['Jamais','אף פעם','أبدًا'],
+ 'Log out':['Se déconnecter','התנתק','تسجيل الخروج'],
+ 'Log out of R-Style?':['Se déconnecter de R-Style ?','להתנתק מ-R-Style?','تسجيل الخروج من R-Style؟'],
+ 'Accessory':['Accessoires','אביזרים','إكسسوارات'],
+ 'Silk scarf':['Foulard en soie','צעיף משי','وشاح حريري'],'Cap':['Casquette','כובע מצחייה','قبعة'],'Gold necklace':['Collier doré','שרשרת זהב','قلادة ذهبية'],'Sunglasses':['Lunettes de soleil','משקפי שמש','نظارات شمسية'],'Leather belt':['Ceinture en cuir','חגורת עור','حزام جلدي'],
+ 'Voice message':['Message vocal','הודעה קולית','رسالة صوتية'],
+ 'React':['Réagir','הגב','تفاعل'],
+ 'Gold member':['Membre Gold','חבר/ת Gold','عضو Gold']
+};const L=['fr','he','ar'];window.I18N=window.I18N||{};L.forEach((c,i)=>{window.I18N[c]=window.I18N[c]||{};for(const k in T)window.I18N[c][k]=T[k][i];});})();
+
+/* ---------- small helpers ---------- */
+const FRIENDS=new Set(['u1','u2','u3','u4','u5','u6']);
+function isFriend(id){return FRIENDS.has(id)&&!S.blocked[id];}
+function firstName(n){return String(n||'').split(' ')[0];}
+function pop(){if(navigator.vibrate)try{navigator.vibrate(10);}catch(_){}
+  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain(),n=actx.currentTime;o.type='sine';o.frequency.setValueAtTime(520,n);o.frequency.exponentialRampToValueAtTime(1250,n+.07);g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(.12,n+.015);g.gain.exponentialRampToValueAtTime(.0001,n+.13);o.connect(g).connect(actx.destination);o.start(n);o.stop(n+.15);}catch(_){}}
+S.chatTheme=S.chatTheme||{};S.chatOpt=S.chatOpt||{};S.pins=S.pins||{};S.favChats=S.favChats||{};
+
+/* ---------- chat themes (always a gradient) ---------- */
+const THEMES=[['classic','Classic','#0B0B0D','#FFFFFF'],['lavender','Lavender','#4C1D95','#F9A8D4'],['ocean','Ocean','#0C4A6E','#7DD3FC'],['sunset','Sunset','#7F1D1D','#FDBA74'],['forest','Forest','#14532D','#BBF7D0'],['burgundy','Burgundy','#4A0E1C','#FDA4AF'],['peach','Peach','#9A3412','#FFEDD5'],['night','Night','#020617','#64748B'],['gold','Gold','#0B0B0D','#D4AF37']];
+function roomGradient(id){const th=S.chatTheme[id];const T=THEMES.find(x=>x[0]===th);
+  if(T)return `linear-gradient(180deg,${T[2]} 0%,${T[2]} 12%,${mix(T[2],T[3],.5)} 55%,${T[3]} 100%)`;
+  if(S.vip)return 'linear-gradient(180deg,#000 0%,#0B0A08 30%,#2A2314 75%,#4A3B18 100%)';
+  return isLight()?'linear-gradient(180deg,#0B0B0D 0%,#2E2E33 28%,#BDBDC3 62%,#FFFFFF 90%)':'linear-gradient(180deg,#000 0%,#1A1A1D 24%,#6E6E76 62%,#A8A8B0 100%)';}
+function mix(a,b,k){const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));const A=p(a),B=p(b);return '#'+A.map((v,i)=>Math.round(v+(B[i]-v)*k).toString(16).padStart(2,'0')).join('');}
+
+/* ====================== ROOM ====================== */
+function openRoom(id){if(USERS[id]&&S.blocked[id])return;seedChats();roomId=id;const r=roomInfo(id);
+  const av=$('#roomAv');av.className='av'+(r.group?' grpAv':'');av.style.cssText='width:38px;height:38px;font-size:14px;'+(r.uid?`background:${USERS[id].color}`:r.av);av.innerHTML=r.group?SV(ICONS.group,'style="width:20px;height:20px;color:#fff"'):initials(r.name);
+  $('#roomName').innerHTML=esc(r.name)+`<span class="sub">${r.group?(r.members.length+1)+' '+t('members'):(r.uid?t('online'):'')}</span>`;
+  $('#roomBg').style.background=roomGradient(id);$('#micLock').hidden=true;
+  show('room');renderMsgs();}
+function msgBody(m){
+  if(m.a!==undefined||m.voice){return `<span class="vmsg"><button class="vplay" data-play="${m.a?'1':''}" aria-label="Play">${SV('<path d="M7 4l13 8-13 8z" fill="currentColor"/>')}</button><span class="wave">${Array.from({length:22},(_,i)=>`<i style="height:${4+Math.round(Math.abs(Math.sin(i*1.7+((m.ts||1)%7)))*16)}px"></i>`).join('')}</span><small>${m.dur||'0:05'}</small></span>`;}
+  if(m.sticker){const it=findItem(m.sticker);return `<div class="stk" ${it?itemPh(it):''}>${it?itemFace(it):''}</div>`;}
+  if(m.img&&m.once){return `<button class="onceMsg" data-once="1"><span class="oc">1</span>${m.opened&&m.f!=='me'?t('Opened'):t('Photo · view once')}</button>`;}
+  if(m.img)return `<img src="${m.img}" alt="">${m.filter?`<span class="ftag">${esc(m.filter)}</span>`:''}`;
+  if(m.outfit){const its=m.outfit.map(findItem).filter(Boolean);return `<div class="card4">${its.slice(0,4).map(i=>`<div ${itemPh(i)}>${itemFace(i)}</div>`).join('')}</div>${t('What do you think of this outfit?')}`;}
+  if(m.short){const p=findPost(m.short);return `<b>Short</b> · ${p?esc(p.cap||''):''}`;}
+  if(m.contact){const u=USERS[m.contact];return u?`<span class="ccard">${avHTML(m.contact,34)}<b>${esc(u.name)}<small>@${esc(u.handle)}</small></b></span>`:'';}
+  return esc(m.t);}
+let typingRoom=null;
+function renderMsgs(){const box=$('#msgs');const r=roomInfo(roomId);const st=streakOf(roomId);const all=S.chats[roomId]||[];
+  let h=`<div class="daytag">${t('Today')}</div>`;
+  if(st)h+=`<div class="daytag"><span class="flame ${st.warn?'warn':''}" style="justify-content:center">${SV(ICONS.flame)}${t('{n}-day streak',{n:st.n})}</span></div>`;
+  let lastMe=-1;all.forEach((m,k)=>{if(m.f==='me')lastMe=k;});
+  all.forEach((m,k)=>{
+    if(m.f==='sys'){h+=`<div class="daytag">${esc(m.t)}</div>`;return;}
+    const cls='m '+(m.f==='me'?'me':'them')+(m.sticker?' sticker':'')+(m.rx&&m.rx.length?' hasrx':'')+(m.star?' starred':'')+(m.img&&!m.once?' pic':'');
+    let inner='';if(r.group&&m.f!=='me'&&m.by)inner+=`<span class="from">${esc(USERS[m.by]?.name||'')}</span>`;
+    inner+=msgBody(m);
+    if(m.rx&&m.rx.length)inner+=`<span class="rx">${m.rx.map(x=>SV(ICONS[x])).join('')}</span>`;
+    h+=`<div class="${cls}" data-k="${k}">${inner}</div>`;
+    if(k===lastMe){const s=m.st||'read';h+=`<div class="mstat ${s}">${s==='sent'?TICK1:TICK2}<span>${t(s==='sent'?'Sent':s==='delivered'?'Delivered':'Read')}</span></div>`;}
+  });
+  if(typingRoom===roomId)h+=`<div class="m them typing"><i></i><i></i><i></i></div>`;
+  box.innerHTML=h;box.scrollTop=box.scrollHeight;}
+function flyLast(){const box=$('#msgs');const el=[...box.querySelectorAll('.m.me')].pop();const comp=$('#composer');if(!el||!comp||!el.animate)return;
+  const a=el.getBoundingClientRect(),c=$('#msgInput').getBoundingClientRect();
+  const dx=(c.left+20)-a.left,dy=(c.top)-a.top;
+  el.animate([{transform:`translate(${dx}px,${dy}px) scale(.55)`,opacity:.3,borderRadius:'22px'},{transform:'translate(0,-6px) scale(1.04)',opacity:1,offset:.75},{transform:'none',opacity:1}],{duration:420,easing:'cubic-bezier(.2,.8,.25,1)'});}
+function burstSend(){const b=$('#sendBtn');b.classList.remove('sendfx');void b.offsetWidth;b.classList.add('sendfx');setTimeout(()=>b.classList.remove('sendfx'),600);}
+function pushMsg(id,m){seedChats();m.ts=m.ts||Date.now();if(m.f==='me')m.st='sent';(S.chats[id]=S.chats[id]||[]).push(m);if(m.f==='me')bumpStreak(id);save();
+  const here=()=>current==='room'&&roomId===id;
+  if(here()){renderMsgs();if(m.f==='me'){flyLast();burstSend();pop();}}
+  const r=roomInfo(id);
+  if(m.f==='me'){
+    setTimeout(()=>{if(m.st==='sent'){m.st='delivered';save();if(here())renderMsgs();}},600);
+    if(!r.dm&&!(S.chatOpt[id]||{}).restricted){
+      setTimeout(()=>{m.st='read';typingRoom=id;save();if(here())renderMsgs();},1000);
+      setTimeout(()=>{typingRoom=null;const by=r.group?pick(r.members):id;
+        if((m.outfit||m.sticker||m.img)&&Math.random()<.85){m.rx=m.rx||[];if(!m.rx.length)m.rx.push(pick(['heart','flame','crown']));}
+        S.chats[id].push({f:'them',by,t:pick(REPLIES),ts:Date.now(),read:here()});save();if(here())renderMsgs();else if(current==='chat')renderChatList();},2600);}
+  }}
+$('#composer').onsubmit=e=>{e.preventDefault();const inp=$('#msgInput');const tx=inp.value.trim();if(!tx)return;inp.value='';pushMsg(roomId,{f:'me',t:tx});};
+$('#roomBack').onclick=()=>show('chat');
+$('#roomWho').onclick=()=>openContact(roomId);
+$('#callBtn').onclick=()=>startCall(roomId,false);
+$('#videoBtn').onclick=()=>startCall(roomId,true);
+$('#snapBtn').onclick=()=>openSnap(roomId);
+/* message actions: long press / double tap */
+(function(){const box=$('#msgs');let lt=0,lk=null,hold=null,held=false;
+  const open=k=>{const m=(S.chats[roomId]||[])[k];if(!m||m.f==='sys')return;
+    openSheet(`<h3>${t('React')}</h3><div class="rxbar">${['heart','flame','crown','star'].map(x=>`<button data-rx="${x}" aria-label="${x}">${SV(ICONS[x])}</button>`).join('')}</div><button class="srow" id="starMsg"><div class="l"><b>${t('Star')}</b></div><span>${m.star?'✓':''}</span></button>`);
+    $('#sheet').querySelectorAll('[data-rx]').forEach(b=>b.onclick=()=>{m.rx=[b.dataset.rx];save();closeSheet();renderMsgs();});
+    $('#starMsg').onclick=()=>{m.star=!m.star;save();closeSheet();renderMsgs();};};
+  box.onpointerdown=e=>{const el=e.target.closest('.m');held=false;if(!el||el.classList.contains('typing'))return;hold=setTimeout(()=>{held=true;open(+el.dataset.k);},450);};
+  box.onpointerup=e=>{clearTimeout(hold);if(held)return;const el=e.target.closest('.m');if(!el)return;
+    if(e.target.closest('[data-once]')){openOnce(+el.dataset.k);return;}
+    if(e.target.closest('.vplay')){playVoice(+el.dataset.k,e.target.closest('.vplay'));return;}
+    const now=Date.now();if(now-lt<320&&lk===el.dataset.k){open(+el.dataset.k);lt=0;}else{lt=now;lk=el.dataset.k;}};
+  box.onpointercancel=()=>clearTimeout(hold);box.onpointermove=e=>{if(Math.abs(e.movementY)>3)clearTimeout(hold);};})();
+function playVoice(k,btn){const m=S.chats[roomId][k];if(m.a){try{const a=new Audio(m.a);a.play();}catch(_){}}
+  const el=btn.closest('.m');el.classList.add('playing');setTimeout(()=>el.classList.remove('playing'),2200);}
+function openOnce(k){const m=S.chats[roomId][k];if(!m)return;
+  if(m.f==='me'){toast(t('Photo · view once'));return;}
+  if(m.opened){toast(t('Opened'));return;}
+  const v=document.createElement('div');v.className='onceView';v.innerHTML=`<img src="${m.img}" alt=""><span>${t('View once')}</span>`;$('#app').appendChild(v);v.onclick=()=>{v.remove();m.opened=true;delete m.img_;save();renderMsgs();};}
+
+/* voice messages: for everyone */
+let vrec=null,vchunks=[],vStart=0,vFake=null;
+$('#micBtn').onclick=async()=>{
+  const b=$('#micBtn');
+  if(vFake){clearTimeout(vFake.t);const dur=Math.max(1,Math.round((Date.now()-vStart)/1000));vFake=null;b.classList.remove('recording');pushMsg(roomId,{f:'me',voice:1,dur:'0:'+String(dur).padStart(2,'0')});return;}
+  if(vrec&&vrec.state==='recording'){vrec.stop();return;}
+  vStart=Date.now();
+  try{if(!navigator.mediaDevices||!window.MediaRecorder)throw 0;const st=await navigator.mediaDevices.getUserMedia({audio:true});vrec=new MediaRecorder(st);vchunks=[];vrec.ondataavailable=ev=>vchunks.push(ev.data);
+    vrec.onstop=()=>{st.getTracks().forEach(x=>x.stop());b.classList.remove('recording');const dur=Math.max(1,Math.round((Date.now()-vStart)/1000));
+      const fr=new FileReader();fr.onload=()=>pushMsg(roomId,{f:'me',a:fr.result,dur:'0:'+String(Math.min(59,dur)).padStart(2,'0')});fr.readAsDataURL(new Blob(vchunks,{type:vrec.mimeType}));};
+    vrec.start();b.classList.add('recording');toast(t('Recording… tap to send'));
+  }catch(err){/* demo: the frame blocks the microphone, we still show the voice message */
+    vFake={t:setTimeout(()=>{if(vFake)$('#micBtn').click();},8000)};b.classList.add('recording');toast(t('Recording… tap to send'));}};
+
+/* attach menu: photo now opens the Snapchat-like camera */
+$('#attachBtn').onclick=()=>{openSheet(`<h3>${t('Send')}</h3>
+  <button class="srow" id="atPhoto"><div class="l"><b>${t('Photo')}</b><small class="muted">${t('Photos are checked by AI to block inappropriate images')}</small></div></button>
+  <button class="srow" id="atOutfit"><div class="l"><b>${t('Outfit from my wardrobe')}</b></div></button>
+  <button class="srow" id="atSticker"><div class="l"><b>${t('Sticker of my clothes')}</b><small class="muted">${t('Turn any item of your wardrobe into a sticker')}</small></div></button>`);
+  $('#atPhoto').onclick=()=>{closeSheet();openSnap(roomId);};
+  $('#atOutfit').onclick=()=>{const opts=[...(S.today?.list||[]),...S.saved];if(!opts.length){toast(t('No outfits yet'));return;}
+    setSheet(`<h3>${t('Choose an outfit')}</h3>${opts.map((o,k)=>`<button class="saved" style="width:100%;text-align:start" data-po="${k}"><b>${esc(o.title||t('Outfit'))}</b><div class="row4">${o.ids.map(findItem).filter(Boolean).slice(0,4).map(i=>`<div ${itemPh(i)}>${itemFace(i)}</div>`).join('')}</div></button>`).join('')}`);
+    $('#sheet').querySelectorAll('[data-po]').forEach(b=>b.onclick=()=>{closeSheet();pushMsg(roomId,{f:'me',outfit:opts[+b.dataset.po].ids});});};
+  $('#atSticker').onclick=()=>{const items=allItems();setSheet(`<h3>${t('Sticker of my clothes')}</h3><div class="wgrid" style="margin-top:12px">${items.map(i=>`<button class="item" data-stk="${i.id}"><div class="ph" ${itemPh(i)}>${itemFace(i)}</div><div class="meta"><b>${esc(i.name)}</b></div></button>`).join('')}</div>`);
+    $('#sheet').querySelectorAll('[data-stk]').forEach(b=>b.onclick=()=>{closeSheet();pushMsg(roomId,{f:'me',sticker:b.dataset.stk});});};};
+
+/* ====================== CHAT LIST: long-press peek, pins, Gold-only challenge ====================== */
+function renderChallenge(){const box=$('#challenge');if(!S.vip){box.innerHTML='';return;}
+  const c=challengeToday();const who=['u1','u3','u2'].filter(u=>!S.blocked[u]);
+  box.innerHTML=`<div class="challenge"><div class="lbl"><b>${t('DAILY CHALLENGE')}</b><span>${t('Ends in {h} h',{h:hoursLeft()})}</span></div>
+   <div><h3>${esc(t(c.theme))}</h3><p>${t('Theme chosen by Ruby · your friends vote')}</p></div>
+   <div class="foot"><div class="stack"><span style="display:flex">${who.map(u=>avHTML(u,30)).join('')}</span>${t('{n} friends posted',{n:who.length})}</div>
+   <button class="go ${c.joined?'done':''}" data-chal="1">${c.joined?t('Posted'):t('Join')}</button></div></div>`;}
+const _renderChatList=renderChatList;
+renderChatList=function(){_renderChatList();const box=$('#convs');
+  const rows=[...box.querySelectorAll('.crow[data-room]')];const pinned=rows.filter(r=>S.pins[r.dataset.room]);
+  pinned.reverse().forEach(r=>{r.classList.add('pinned');const rb=box.querySelector('.rubyRow');if(rb)rb.after(r);else box.prepend(r);});
+  rows.forEach(r=>{const o=S.chatOpt[r.dataset.room]||{};if(o.muted)r.querySelector('.t b')?.insertAdjacentHTML('beforeend',` <span class="mutedIc">${SV(ICONS.mute)}</span>`);});};
+(function(){const list=$('#clist');let hold=null,sx=0,sy=0,suppress=false;
+  list.addEventListener('pointerdown',e=>{const r=e.target.closest('.crow[data-room]');if(!r)return;sx=e.clientX;sy=e.clientY;suppress=false;hold=setTimeout(()=>{suppress=true;openPeek(r.dataset.room,r);},430);});
+  list.addEventListener('pointermove',e=>{if(hold&&(Math.abs(e.clientX-sx)>8||Math.abs(e.clientY-sy)>8)){clearTimeout(hold);hold=null;}});
+  list.addEventListener('pointerup',()=>{clearTimeout(hold);hold=null;});list.addEventListener('pointercancel',()=>{clearTimeout(hold);hold=null;});
+  list.addEventListener('contextmenu',e=>{if(e.target.closest('.crow'))e.preventDefault();});
+  list.addEventListener('click',e=>{if(suppress){e.stopPropagation();e.preventDefault();suppress=false;}},true);})();
+function openPeek(id,row){const r=roomInfo(id);const all=(S.chats[id]||[]).filter(m=>m.f!=='sys');const last=all.slice(-4);
+  let unread=0;for(let i=all.length-1;i>=0&&all[i].f==='them'&&!all[i].read;i--)unread++;
+  if(navigator.vibrate)try{navigator.vibrate(12);}catch(_){}
+  const p=$('#peek');const o=S.chatOpt[id]||{};
+  p.innerHTML=`<div class="pkBg"></div><div class="pkCard"><div class="pkHead">${r.uid?avHTML(r.uid,36):`<span class="av grpAv" style="width:36px;height:36px">${SV(ICONS.group,'style="width:18px;height:18px;color:#fff"')}</span>`}<span><b>${esc(r.name)}</b><small>${unread?t('{n} new messages',{n:unread}):''}</small></span></div>
+    <div class="pkMsgs" style="background:${roomGradient(id)}">${last.map(m=>`<div class="m ${m.f==='me'?'me':'them'}">${m.img||m.sticker||m.outfit?previewV5(id,m):msgBody(m)}</div>`).join('')||`<div class="daytag">${t('Say hi')}</div>`}</div>
+    <div class="pkNote">${SV(ICONS.eyeoff)}${esc(firstName(r.name))} ${t('doesn\'t see that you read it')}</div></div>
+    <div class="pkMenu"><button data-pk="open">${t('Open')}${SV(ICONS.chat)}</button><button data-pk="read">${t('Mark as read')}${TICK2}</button><button data-pk="pin">${t(S.pins[id]?'Unpin':'Pin')}${SV(ICONS.pin)}</button><button data-pk="mute">${t(o.muted?'Unmute':'Silence')}${SV(ICONS.mute)}</button></div>`;
+  p.classList.add('on');
+  p.onclick=e=>{const b=e.target.closest('[data-pk]');if(!b){if(e.target.closest('.pkCard')){closePeek();markRead(id);openRoom(id);return;}closePeek();return;}
+    const k=b.dataset.pk;closePeek();
+    if(k==='open'){markRead(id);openRoom(id);}if(k==='read'){markRead(id);renderChatList();}
+    if(k==='pin'){S.pins[id]=!S.pins[id];save();renderChatList();}
+    if(k==='mute'){const x=S.chatOpt[id]=S.chatOpt[id]||{};x.muted=!x.muted;save();renderChatList();}};}
+function closePeek(){$('#peek').classList.remove('on');}
+function markRead(id){(S.chats[id]||[]).forEach(m=>{if(m.f==='them')m.read=true;});save();}
+$('#clist').onclick=e=>{
+  if(e.target.closest('[data-chal]')){if(challengeToday().joined)return;challengeMode=true;openPoster();return;}
+  if(e.target.closest('#reqBar')){openRequests();return;}
+  if(e.target.closest('[data-ruby]')){show('ruby');return;}
+  const r=e.target.closest('[data-room]');if(r){markRead(r.dataset.room);openRoom(r.dataset.room);}};
+
+/* ====================== CONTACT INFO (like WhatsApp) ====================== */
+let ciId=null;
+function ciRow(icon,label,right,attrs,cls){return `<button class="ciRow ${cls||''}" ${attrs||''}>${SV(ICONS[icon])}<span>${label}</span>${right||''}</button>`;}
+function ciTog(on){return `<span class="toggle ${on?'on':''}"></span>`;}
+function openContact(id){ciId=id;const r=roomInfo(id);const u=r.uid?USERS[r.uid]:null;const o=S.chatOpt[id]=S.chatOpt[id]||{};const chev=`<span class="chev">${SV(ICONS.chev)}</span>`;
+  const msgs=S.chats[id]||[];const media=msgs.filter(m=>m.img&&!m.once);const stars=msgs.filter(m=>m.star).length;
+  const common=r.uid?S.groups.filter(g=>!g.dm&&g.members.includes(r.uid)):[];
+  const th=THEMES.find(x=>x[0]===S.chatTheme[id]);
+  const dots=`<span class="ciDots">${THEMES.slice(0,4).map(x=>`<i style="background:linear-gradient(180deg,${x[2]},${x[3]})"></i>`).join('')}</span>`;
+  const gold=u&&u.crown;
+  $('#ciBody').innerHTML=`<div class="ciTop">${r.uid?`<span class="ciAv ${gold?'gring':''}">${avHTML(r.uid,108)}</span>`:`<span class="ciAv"><span class="av grpAv" style="width:108px;height:108px">${SV(ICONS.group,'style="width:46px;height:46px;color:#fff"')}</span></span>`}
+     <h2>${esc(r.name)}</h2>${u?`<small class="muted">@${esc(u.handle)} · AI Style Score ${u.score}</small>`:`<small class="muted">${r.members.length+1} ${t('members')}</small>`}
+     ${gold?`<span class="goldChip">${SV(ICONS.crown)}GOLD</span>`:''}</div>
+   <div class="ciActs"><button data-ci="call">${SV(ICONS.phone)}${t('Call')}</button><button data-ci="video">${SV(ICONS.video)}${t('Video')}</button><button data-ci="search">${SV(ICONS.search)}${t('Search')}</button></div>
+   <button class="ciCard ciMedia" data-ci="media"><span class="hd"><span>${t('Media, links and docs')}</span><span class="muted">${media.length} ${chev}</span></span>
+     <span class="th">${media.slice(-4).map(m=>`<i style="background-image:url(${m.img})"></i>`).join('')||`<small class="muted">${t('No media yet')}</small>`}</span></button>
+   <div class="ciCard">${ciRow('star',t('Starred messages'),`<span class="muted">${stars}</span>${chev}`,'data-ci="stars"')}
+     ${ciRow('bell',t('Notifications'),ciTog(!o.muted),'data-ci="notif"')}
+     ${ciRow('palette',t('Chat theme'),(th?`<span class="muted">${t(th[1])}</span>`:dots)+chev,'data-ci="theme"')}
+     ${ciRow('download',t('Save photos'),ciTog(o.savePhotos!==false),'data-ci="savep"')}
+     ${ciRow('timer',t('Disappearing messages'),`<span class="muted">${t(o.eph||'Off')}</span>${chev}`,'data-ci="eph"')}</div>
+   <div class="ciCard">${ciRow('lock',t('Lock chat'),ciTog(!!o.locked),'data-ci="lock"')}
+     ${ciRow('eyeoff',t('Restricted chat'),ciTog(!!o.restricted),'data-ci="restrict"')}
+     ${ciRow('shield',t('Encryption'),`<span class="muted sm">${t('Messages protected')}</span>`,'data-ci="enc"')}</div>
+   ${u?`<div class="ciCard ciInfo"><small>${t('Contact details').toUpperCase()}</small><b>${esc(t(u.bio))}</b><span class="muted">${t('On R-Style since {d}',{d:'2026'})}</span></div>
+   <div class="ciSec">${common.length?t('{n} groups in common',{n:common.length}):t('No groups in common')}</div>
+   ${common.length?`<div class="ciCard">${common.map(g=>`<button class="ciRow" data-cig="${g.id}"><span class="av grpAv" style="width:40px;height:40px">${SV(ICONS.group,'style="width:20px;height:20px;color:#fff"')}</span><span>${esc(g.name)}<small class="muted">${g.members.map(x=>firstName(USERS[x]?.name)).join(', ')}, ${t('You')}</small></span></button>`).join('')}</div>`:''}
+   <div class="ciNote">${t('Only groups you are in too.')}</div>`:''}
+   <div class="ciCard">${u?ciRow('share',t('Share contact'),'','data-ci="share"'):''}
+     ${ciRow('heart',t(S.favChats[id]?'Remove from favorites':'Add to favorites'),'','data-ci="fav"')}
+     ${ciRow('list',t('Add to a list'),'','data-ci="list"')}
+     ${ciRow('export',t('Export chat'),'','data-ci="export"')}</div>
+   <div class="ciCard danger">${ciRow('trash',t('Clear chat'),'','data-ci="clear"')}
+     ${u?ciRow('block',t('Block {n}',{n:firstName(u.name)}),'','data-ci="block"')+ciRow('flag',t('Report {n}',{n:firstName(u.name)}),'','data-ci="report"'):''}</div>`;
+  openOverlay('cinfo');}
+$('#ciBack').onclick=()=>closeOverlay('cinfo');
+$('#ciBody').onclick=e=>{const g=e.target.closest('[data-cig]');if(g){closeOverlay('cinfo');openRoom(g.dataset.cig);return;}
+  const b=e.target.closest('[data-ci]');if(!b)return;const k=b.dataset.ci,id=ciId,r=roomInfo(id),o=S.chatOpt[id]=S.chatOpt[id]||{};const nm=firstName(r.name);
+  const re=()=>{save();openContact(id);};
+  if(k==='call'||k==='video'){closeOverlay('cinfo');startCall(id,k==='video');}
+  if(k==='search'){openSheet(`<h3>${t('Search')}</h3><input class="field" id="ciQ" style="height:48px;font-size:15px;margin-top:10px" autocomplete="off"><div id="ciRes" style="margin-top:10px"></div>`);
+    $('#ciQ').oninput=ev=>{const q=ev.target.value.trim().toLowerCase();const res=q?(S.chats[id]||[]).filter(m=>m.t&&m.t.toLowerCase().includes(q)):[];$('#ciRes').innerHTML=res.map(m=>`<div class="srow"><div class="l"><b>${esc(m.t)}</b><small class="muted">${m.f==='me'?t('You'):esc(nm)}</small></div></div>`).join('');};$('#ciQ').focus();}
+  if(k==='media'){const media=(S.chats[id]||[]).filter(m=>m.img&&!m.once);openSheet(`<h3>${t('Media, links and docs')}</h3>${media.length?`<div class="vgrid" style="margin-top:10px">${media.map(m=>`<div style="background-image:url(${m.img})"></div>`).join('')}</div>`:`<p class="muted">${t('No media yet')}</p>`}`);}
+  if(k==='stars'){const st=(S.chats[id]||[]).filter(m=>m.star);openSheet(`<h3>${t('Starred messages')}</h3>${st.length?st.map(m=>`<div class="srow"><div class="l"><b>${m.t?esc(m.t):previewV5(id,m)}</b><small class="muted">${m.f==='me'?t('You'):esc(nm)}</small></div>${SV(ICONS.star,'style="width:18px;height:18px;color:var(--accent)"')}</div>`).join(''):`<p class="muted">${t('No starred messages yet. Long-press a message to star it.')}</p>`}`);}
+  if(k==='notif'){o.muted=!o.muted;re();}
+  if(k==='savep'){o.savePhotos=o.savePhotos===false;re();}
+  if(k==='lock'){o.locked=!o.locked;re();if(o.locked)toast(t('Locked chats open with Face ID in the iPhone app.'));}
+  if(k==='restrict'){o.restricted=!o.restricted;re();if(o.restricted)toast(t('Restricted: {n} can\'t see when you\'re online or read their messages.',{n:nm}));}
+  if(k==='enc'){openSheet(`<div style="text-align:center;padding:10px 0">${SV(ICONS.shield,'style="width:44px;height:44px;color:var(--accent)"')}<h3>${t('Encryption')}</h3><p class="muted">${t('Your messages are protected. In the iPhone app, only you and {n} can read them.',{n:esc(nm)})}</p></div>`);}
+  if(k==='eph'){openSheet(`<h3>${t('Disappearing messages')}</h3>${['Off','24 hours','7 days'].map(x=>`<button class="srow" data-eph="${x}"><div class="l"><b>${t(x)}</b></div><span>${(o.eph||'Off')===x?'✓':''}</span></button>`).join('')}`);
+    $('#sheet').querySelectorAll('[data-eph]').forEach(x=>x.onclick=()=>{o.eph=x.dataset.eph;closeSheet();re();});}
+  if(k==='theme')openThemePicker(id);
+  if(k==='share'){const u=r.uid;openSheet(`<h3>${t('Share contact')}</h3>${Object.keys(USERS).filter(x=>x!==u&&!S.blocked[x]).map(x=>`<button class="pick" data-shto="${x}">${avHTML(x,42)}<b>${USERS[x].name}</b><span>›</span></button>`).join('')}`);
+    $('#sheet').querySelectorAll('[data-shto]').forEach(x=>x.onclick=()=>{pushMsg(x.dataset.shto,{f:'me',contact:u});closeSheet();toast(t('Sent ✓'));});}
+  if(k==='fav'){S.favChats[id]=!S.favChats[id];re();}
+  if(k==='list'){openSheet(`<h3>${t('Add to a list')}</h3>${['Friends','Family','Style squad'].map(l=>`<button class="srow" data-lst="${l}"><div class="l"><b>${t(l)}</b></div><span>${(o.list===l)?'✓':''}</span></button>`).join('')}`);
+    $('#sheet').querySelectorAll('[data-lst]').forEach(x=>x.onclick=()=>{o.list=x.dataset.lst;save();closeSheet();toast(t('Added to {l}',{l:t(o.list)}));});}
+  if(k==='export'){const txt=(S.chats[id]||[]).map(m=>(m.f==='me'?'@'+me().username:m.f==='sys'?'—':r.name)+': '+(m.t||previewV5(id,m))).join('\n');
+    try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain'}));a.download='R-Style - '+r.name+'.txt';document.body.appendChild(a);a.click();a.remove();}catch(_){}toast(t('Chat exported'));}
+  if(k==='clear'){openSheet(`<h3>${t('Clear chat')}</h3><p class="muted">${t('Clear all messages with {n}?',{n:esc(r.name)})}</p><button class="btn danger" id="clrYes" style="margin-top:12px">${t('Clear chat')}</button><button class="btn" id="clrNo" style="margin-top:6px">${t('Cancel')}</button>`);
+    $('#clrYes').onclick=()=>{S.chats[id]=[];save();closeSheet();re();toast(t('Chat cleared'));};$('#clrNo').onclick=closeSheet;}
+  if(k==='block'){const u=r.uid;S.blocked[u]=true;if(S.following[u])toggleFollow(u);save();closeOverlay('cinfo');show('chat');toast(t('{n} is blocked',{n:USERS[u].name}));}
+  if(k==='report'){toast(t('Thanks — our team will review this account'));}
+};
+function openThemePicker(id){let sel=S.chatTheme[id]||null;const nm=firstName(roomInfo(id).name);
+  const draw=()=>{openSheet(`<h3>${t('Chat theme')}</h3><p class="muted" style="margin:0;font-size:13px">${t('Always a gradient: choose your color. Only for you and {n}.',{n:esc(nm)})}</p>
+    <div class="thGrid">${THEMES.map(x=>`<button data-th9="${x[0]}" class="${sel===x[0]?'on':''}"><span class="thsw" style="background:linear-gradient(180deg,${x[2]},${x[3]})"><i class="a"></i><i class="b"></i></span><small>${t(x[1])}</small></button>`).join('')}</div>
+    <button class="btn primary" id="thApply" style="margin-top:14px">${t('Apply')}</button>`);
+    $('#sheet').querySelectorAll('[data-th9]').forEach(b=>b.onclick=()=>{sel=b.dataset.th9;$('#sheet').querySelectorAll('[data-th9]').forEach(x=>x.classList.toggle('on',x===b));});
+    $('#thApply').onclick=()=>{if(sel)S.chatTheme[id]=sel;save();closeSheet();$('#roomBg').style.background=roomGradient(id);openContact(id);};};draw();}
+
+/* ====================== FILTERS (shared by calls + camera) ====================== */
+const FILTERS=[
+ {k:'none',n:'None',css:'none'},
+ {k:'vintage',n:'Vintage',css:'sepia(.55) contrast(1.05) saturate(1.2)',sw:'#8B6B4F'},
+ {k:'bw',n:'B&W',css:'grayscale(1) contrast(1.1)',sw:'#3F3F46'},
+ {k:'warm',n:'Warm',css:'saturate(1.3) hue-rotate(-12deg) brightness(1.05)',sw:'#B45309'},
+ {k:'cool',n:'Cool',css:'saturate(1.1) hue-rotate(18deg) brightness(1.02)',sw:'#0E7490'},
+ {k:'crown',n:'Crown',ov:'crown'},{k:'puppy',n:'Puppy',ov:'puppy'},{k:'hearts',n:'Hearts',ov:'hearts'},{k:'sparkles',n:'Sparkles',ov:'sparkles'},
+ {k:'glasses',n:'Glasses',ov:'glasses',gold:1},{k:'hat',n:'Hat',ov:'hat',gold:1},{k:'earrings',n:'Earrings',ov:'earrings',gold:1},{k:'makeup',n:'Make-up',ov:'makeup',gold:1},
+ {k:'fdate',n:'Date frame',ov:'fdate',gold:1},{k:'flogo',n:'R-Style frame',ov:'flogo',gold:1}];
+const OVL={
+ crown:'<svg viewBox="0 0 120 60"><path d="M8 54L16 12l26 22L60 4l18 30 26-22 8 42z" fill="#F5C842" stroke="#B88A10" stroke-width="2" stroke-linejoin="round"/><circle cx="60" cy="40" r="5" fill="#E11D2E"/></svg>',
+ puppy:'<svg viewBox="0 0 120 90"><path d="M10 6l26 12-8 34zM110 6L84 18l8 34z" fill="#92400E"/><ellipse cx="60" cy="74" rx="11" ry="8" fill="#111"/></svg>',
+ hearts:'<svg viewBox="0 0 120 60"><g fill="#F43F5E"><path d="M20 30s-12-7-12-15a7 7 0 0 1 12-4 7 7 0 0 1 12 4c0 8-12 15-12 15z"/><path d="M60 20s-10-6-10-12a6 6 0 0 1 10-3 6 6 0 0 1 10 3c0 6-10 12-10 12z"/><path d="M100 32s-12-7-12-15a7 7 0 0 1 12-4 7 7 0 0 1 12 4c0 8-12 15-12 15z"/></g></svg>',
+ sparkles:'<svg viewBox="0 0 120 60"><g fill="#FDE68A"><path d="M20 10l3 8 8 3-8 3-3 8-3-8-8-3 8-3z"/><path d="M95 6l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z"/><path d="M62 30l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></g></svg>',
+ glasses:'<svg viewBox="0 0 120 40"><g fill="#111"><rect x="8" y="6" width="44" height="28" rx="12"/><rect x="68" y="6" width="44" height="28" rx="12"/><rect x="50" y="14" width="20" height="5"/></g><path d="M16 12h12" stroke="#fff" stroke-opacity=".5" stroke-width="3" stroke-linecap="round"/></svg>',
+ hat:'<svg viewBox="0 0 120 60"><path d="M4 50h112" stroke="#1F2937" stroke-width="8" stroke-linecap="round"/><path d="M28 50c0-28 10-44 32-44s32 16 32 44z" fill="#1F2937"/><path d="M28 40h64" stroke="#D4AF37" stroke-width="5"/></svg>',
+ earrings:'<svg viewBox="0 0 120 50"><g fill="none" stroke="#D4AF37" stroke-width="4"><circle cx="12" cy="30" r="9"/><circle cx="108" cy="30" r="9"/></g><path d="M12 4v17M108 4v17" stroke="#D4AF37" stroke-width="3"/></svg>',
+ makeup:'<svg viewBox="0 0 120 60"><ellipse cx="24" cy="30" rx="14" ry="8" fill="#FB7185" opacity=".45"/><ellipse cx="96" cy="30" rx="14" ry="8" fill="#FB7185" opacity=".45"/><path d="M44 50c10 6 22 6 32 0" stroke="#BE123C" stroke-width="6" fill="none" stroke-linecap="round"/></svg>'};
+function filterById(k){return FILTERS.find(f=>f.k===k)||FILTERS[0];}
+function fName(f){return t(f.n);}
+function fringHTML(sel){return FILTERS.map(f=>{const lock=f.gold&&!S.vip;const face=f.ov?(f.ov==='fdate'||f.ov==='flogo'?`<b>${f.ov==='fdate'?new Date().getDate():'R'}</b>`:OVL[f.ov]):f.k==='none'?SV(ICONS.none):'';
+  return `<button class="fc ${sel===f.k?'on':''} ${lock?'lk':''}" data-f9="${f.k}" aria-label="${esc(fName(f))}" style="${f.sw?`background:${f.sw}`:''}">${face}${lock?`<span class="lkb">${SV(ICONS.lock)}</span>`:''}</button>`;}).join('');}
+function overlayHTML(k){const f=filterById(k);if(!f.ov)return '';
+  if(f.ov==='fdate'){const d=new Date();return `<div class="ov ovDate"><b>${d.getDate()}</b><span>${d.toLocaleDateString(S.lang||'en',{month:'short'}).toUpperCase()} · ${W[S.weather].t}°</span></div>`;}
+  if(f.ov==='flogo')return `<div class="ov ovLogo">${S.vip?'GOLD STYLE':'R-STYLE'}</div>`;
+  return `<div class="ov ov-${f.ov}">${OVL[f.ov]}</div>`;}
+function bindRing(ring,onPick){
+  ring.onclick=e=>{const b=e.target.closest('[data-f9]');if(!b)return;const f=filterById(b.dataset.f9);
+    if(f.gold&&!S.vip){toast(t('This filter is for Gold members'));return;}
+    ring.querySelectorAll('.fc').forEach(x=>x.classList.toggle('on',x===b));b.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});onPick(f);};
+  let tm=null;ring.onscroll=()=>{clearTimeout(tm);tm=setTimeout(()=>{const r=ring.getBoundingClientRect(),cx=r.left+r.width/2;let best=null,bd=1e9;
+    ring.querySelectorAll('.fc').forEach(x=>{const q=x.getBoundingClientRect();const d=Math.abs(q.left+q.width/2-cx);if(d<bd){bd=d;best=x;}});
+    if(best&&!best.classList.contains('on')){const f=filterById(best.dataset.f9);if(f.gold&&!S.vip)return;ring.querySelectorAll('.fc').forEach(x=>x.classList.toggle('on',x===best));onPick(f);}},140);};}
+
+/* ====================== CALLS ====================== */
+const CALL={id:null,video:false,t0:0,timer:0,muted:false,spk:false,menu:false,filters:false,filter:'none',people:[],stream:null,host:false};
+function startCall(id,video){const r=roomInfo(id);
+  if(r.uid&&!isFriend(r.uid)){toast(t('Calls are only between friends who follow each other.'));return;}
+  if(r.dm){toast(t('Calls are only between friends who follow each other.'));return;}
+  Object.assign(CALL,{id,video,t0:Date.now(),muted:false,spk:false,menu:false,filters:false,filter:'none',people:r.group?r.members.slice(0,callMax()-1):[r.uid],host:S.vip});
+  $('#call').classList.add('on');renderCall();clearInterval(CALL.timer);CALL.timer=setInterval(()=>{const e=$('#callTime');if(e)e.textContent=callClock();},1000);
+  if(video)camOn();}
+function callMax(){return S.vip?32:8;}
+function callClock(){const s=Math.floor((Date.now()-CALL.t0)/1000);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+async function camOn(){try{if(!navigator.mediaDevices)throw 0;CALL.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});const v=$('#selfV');if(v){v.srcObject=CALL.stream;v.play().catch(()=>{});}}catch(_){CALL.stream=null;}}
+function camOff(){if(CALL.stream){CALL.stream.getTracks().forEach(x=>x.stop());CALL.stream=null;}}
+function endCall(){clearInterval(CALL.timer);camOff();$('#call').classList.remove('on');$('#call').innerHTML='';const id=CALL.id;CALL.id=null;
+  if(id){const d=callClock();(S.chats[id]=S.chats[id]||[]).push({f:'sys',t:(CALL.video?t('Video'):t('Call'))+' · '+d});save();if(current==='room')renderMsgs();}toast(t('Call ended'));}
+function tileHTML(uid){const u=USERS[uid];return `<div class="tile" style="background:${mix(u.color,'#000000',.45)}"><span class="ti">${initials(u.name)}</span><small>${esc(firstName(u.name))}</small></div>`;}
+function renderCall(){const c=$('#call');const r=roomInfo(CALL.id);const group=CALL.people.length>1||r.group;const uid=r.uid;const u=uid?USERS[uid]:null;
+  const gold=u&&u.crown;const fsel=filterById(CALL.filter);
+  const btn=(id,icon,lbl,on,cls)=>`<button class="cbtn ${on?'on':''} ${cls||''}" id="${id}" aria-label="${lbl}">${icon}</button>`;
+  let stage='';
+  if(group){const all=[...CALL.people,'me'];
+    stage=`<div class="cgrid n${Math.min(all.length,8)}">${all.map(p=>p==='me'?`<div class="tile me"><video id="selfV" autoplay muted playsinline style="filter:${fsel.css||'none'}"></video><span class="ti">${initials(me().username)}</span>${overlayHTML(CALL.filter)}<small>${t('You')}</small></div>`:tileHTML(p)).join('')}</div>`;}
+  else if(CALL.video){stage=`<div class="remote" style="background:${mix(u.color,'#000000',.55)}"><span class="ti big">${initials(u.name)}</span></div>
+      <div class="selfPip"><video id="selfV" autoplay muted playsinline style="filter:${fsel.css||'none'}"></video><span class="ti">${initials(me().username)}</span>${overlayHTML(CALL.filter)}</div>`;}
+  else{stage=`<div class="voiceAv ${gold?'gring':''}">${avHTML(uid,150)}</div>`;}
+  c.className='full on '+(CALL.video||group?'vid':'voice');
+  c.innerHTML=`${stage}
+   <div class="ctop"><b>${esc(group?r.name:u.name)}${gold?SV(ICONS.crown,'class="gc" fill="currentColor"'):''}</b><span id="callTime">${callClock()}</span>${group?`<small>${CALL.people.length+1} / ${CALL.host?32:8}</small>`:''}</div>
+   ${CALL.filters?`<div class="fname">${esc(fName(fsel))}</div><div class="fring" id="callRing">${fringHTML(CALL.filter)}</div><div class="fhint">${t('Swipe to change filter')}</div>`:''}
+   ${CALL.menu?`<div class="cmenu">${!CALL.video&&!group?`<button data-cm="video">${SV(ICONS.video)}${t('Video')}</button>`:''}<button data-cm="add">${SV(ICONS.adduser)}${t('Add')}</button>${CALL.video||group?`<button data-cm="filters" class="${CALL.filters?'on':''}">${SV(ICONS.filters)}${t('Filters')}</button><button data-cm="flip">${SV(ICONS.flip)}</button>`:''}<button data-cm="report">${SV(ICONS.flag)}${t('Report')}</button></div>`:''}
+   <div class="cbar">${btn('cMute',SV(CALL.muted?ICONS.micoff:ICONS.mic),t('Mute'),CALL.muted)}${btn('cSpk',SV(ICONS.speaker),t('Speaker'),CALL.spk)}${btn('cEnd',HANG,t('Hang up'),false,'end')}${btn('cMore',SV(ICONS.plus),t('More'),CALL.menu)}</div>
+   <div class="cdemo">${t('Demo: real calls work in the iPhone app.')}</div>`;
+  hydrate(c);const v=$('#selfV');if(v&&CALL.stream){v.srcObject=CALL.stream;v.play().catch(()=>{});v.classList.add('live');}
+  $('#cMute').onclick=()=>{CALL.muted=!CALL.muted;renderCall();};$('#cSpk').onclick=()=>{CALL.spk=!CALL.spk;renderCall();};
+  $('#cEnd').onclick=endCall;$('#cMore').onclick=()=>{CALL.menu=!CALL.menu;renderCall();};
+  c.querySelectorAll('[data-cm]').forEach(b=>b.onclick=()=>{const k=b.dataset.cm;
+    if(k==='video'){CALL.video=true;CALL.menu=false;camOn();renderCall();}
+    if(k==='filters'){CALL.filters=!CALL.filters;CALL.menu=false;renderCall();}
+    if(k==='flip')toast(t('Demo: real calls work in the iPhone app.'));
+    if(k==='report'){CALL.menu=false;renderCall();toast(t('Thanks — our team will review this account'));}
+    if(k==='add')addToCall();});
+  const ring=$('#callRing');if(ring){bindRing(ring,f=>{CALL.filter=f.k;const s=c.querySelector('.selfPip,.tile.me');if(s){s.querySelectorAll('.ov').forEach(x=>x.remove());s.insertAdjacentHTML('beforeend',overlayHTML(f.k));const vv=s.querySelector('video');if(vv)vv.style.filter=f.css||'none';}c.querySelector('.fname').textContent=fName(f);});
+    const on=ring.querySelector('.fc.on');if(on)ring.scrollLeft=on.offsetLeft-ring.clientWidth/2+on.offsetWidth/2;}}
+function addToCall(){const max=CALL.host?32:8;const can=Object.keys(USERS).filter(x=>isFriend(x)&&!CALL.people.includes(x));
+  openSheet(`<h3>${t('Add to the call')}</h3><p class="muted" style="margin:0 0 6px;font-size:13px">${t('Up to 8 people · up to 32 when a Gold member starts the call')}</p>${can.map(x=>`<button class="pick" data-addc="${x}">${avHTML(x,42)}<b>${USERS[x].name}</b><span>${SV(ICONS.plus,'style="width:18px;height:18px"')}</span></button>`).join('')}`);
+  $('#sheet').querySelectorAll('[data-addc]').forEach(b=>b.onclick=()=>{if(CALL.people.length+1>=max){toast(t('Limit reached')+' · '+max);return;}CALL.people.push(b.dataset.addc);CALL.menu=false;closeSheet();renderCall();});}
+
+/* ====================== SNAP CAMERA (photo + filters + view once) ====================== */
+const SNAP={to:null,stream:null,img:null,filter:'none',once:false};
+async function openSnap(to){SNAP.to=to;SNAP.img=null;SNAP.filter='none';SNAP.once=false;$('#snap').classList.add('on');renderSnap();
+  try{if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw 0;SNAP.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});const v=$('#snapV');if(v){v.srcObject=SNAP.stream;await v.play().catch(()=>{});}renderSnap();}
+  catch(_){SNAP.stream=null;renderSnap();}}
+function closeSnap(){if(SNAP.stream){SNAP.stream.getTracks().forEach(x=>x.stop());SNAP.stream=null;}$('#snap').classList.remove('on');$('#snap').innerHTML='';}
+function renderSnap(){const s=$('#snap');const f=filterById(SNAP.filter);const r=roomInfo(SNAP.to);
+  const media=SNAP.img?`<img class="sbase" src="${SNAP.img}" style="filter:${f.css||'none'}" alt="">`:SNAP.stream?`<video id="snapV" class="sbase mirror" autoplay muted playsinline style="filter:${f.css||'none'}"></video>`:`<div class="sbase empty"><p>${t('The camera opens in the iPhone app. Choose a photo from your gallery.')}</p></div>`;
+  s.innerHTML=`${media}<div class="sov">${overlayHTML(SNAP.filter)}</div>
+   <button class="sx" id="snapX" aria-label="Close">${SV(ICONS.x)}</button>
+   <button class="sonce ${SNAP.once?'on':''}" id="snapOnce"><span class="oc">1</span>${t('View once')}</button>
+   <div class="fname">${esc(fName(f))}</div>
+   ${SNAP.img?`<div class="ssend"><button class="sretake" id="snapRetake" aria-label="Retake">${SV(ICONS.x)}</button><button class="sgo" id="snapGo">${t('Send to {n}',{n:esc(firstName(r.name))})} ${SV('<path d="M4 12l16-8-6 16-2.5-6.5z"/>')}</button></div>
+     <div class="fring snapRing" id="snapRing">${fringHTML(SNAP.filter)}</div>`
+   :`<div class="fring snapRing withShutter" id="snapRing">${fringHTML(SNAP.filter)}</div><button class="shut" id="snapShut" aria-label="Take photo"></button>
+     <div class="smodes"><button id="snapGal">${t('Gallery')}</button><span class="on">${t('Photo')}</span></div>`}`;
+  const v=$('#snapV');if(v&&SNAP.stream){v.srcObject=SNAP.stream;v.play().catch(()=>{});}
+  $('#snapX').onclick=closeSnap;$('#snapOnce').onclick=()=>{SNAP.once=!SNAP.once;$('#snapOnce').classList.toggle('on',SNAP.once);};
+  const ring=$('#snapRing');bindRing(ring,ff=>{SNAP.filter=ff.k;const base=s.querySelector('.sbase');if(base&&base.style)base.style.filter=ff.css||'none';s.querySelector('.sov').innerHTML=overlayHTML(ff.k);s.querySelector('.fname').textContent=fName(ff);});
+  const on=ring.querySelector('.fc.on');if(on)ring.scrollLeft=on.offsetLeft-ring.clientWidth/2+on.offsetWidth/2;
+  const sh=$('#snapShut');if(sh)sh.onclick=async()=>{if(SNAP.stream&&v&&v.videoWidth){const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;const x=c.getContext('2d');x.translate(c.width,0);x.scale(-1,1);x.drawImage(v,0,0);SNAP.img=c.toDataURL('image/jpeg',.88);if(SNAP.stream){SNAP.stream.getTracks().forEach(z=>z.stop());SNAP.stream=null;}renderSnap();}
+    else{const fl=await pickFile('image/*',true);if(fl){SNAP.img=await downscale(await readFile(fl),1000,.85);renderSnap();}}};
+  const g=$('#snapGal');if(g)g.onclick=async()=>{const fl=await pickFile('image/*');if(fl){SNAP.img=await downscale(await readFile(fl),1000,.85);if(SNAP.stream){SNAP.stream.getTracks().forEach(z=>z.stop());SNAP.stream=null;}renderSnap();}};
+  const rt=$('#snapRetake');if(rt)rt.onclick=()=>openSnap(SNAP.to);
+  const go=$('#snapGo');if(go)go.onclick=sendSnap;}
+async function composeSnap(){const f=filterById(SNAP.filter);const im=new Image();await new Promise(r=>{im.onload=r;im.onerror=r;im.src=SNAP.img;});
+  const W0=Math.min(900,im.width||900),H0=Math.round(W0*(im.height||1200)/(im.width||900));const c=document.createElement('canvas');c.width=W0;c.height=H0;const x=c.getContext('2d');
+  try{x.filter=f.css&&f.css!=='none'?f.css:'none';}catch(_){}x.drawImage(im,0,0,W0,H0);x.filter='none';
+  if(f.ov&&OVL[f.ov]){const svg=OVL[f.ov].replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" ');const o=new Image();await new Promise(r=>{o.onload=r;o.onerror=r;o.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);});
+    const w=W0*.5,h=w*(o.height/o.width||.5);const y={crown:.08,puppy:.06,hat:.04,hearts:.06,sparkles:.06,glasses:.3,earrings:.42,makeup:.4}[f.ov]||.1;try{x.drawImage(o,(W0-w)/2,H0*y,w,h);}catch(_){}}
+  if(f.ov==='fdate'){const d=new Date();x.fillStyle='#fff';x.beginPath();x.roundRect?x.roundRect(W0-150,24,126,84,20):x.rect(W0-150,24,126,84);x.fill();x.fillStyle='#111';x.font='800 40px Inter,system-ui';x.textAlign='center';x.fillText(String(d.getDate()),W0-87,72);x.font='700 16px Inter,system-ui';x.fillText(d.toLocaleDateString(S.lang||'en',{month:'short'}).toUpperCase()+' · '+W[S.weather].t+'°',W0-87,96);}
+  if(f.ov==='flogo'){x.fillStyle='rgba(255,255,255,.9)';x.font='800 26px Inter,system-ui';x.fillText(S.vip?'GOLD STYLE':'R-STYLE',28,H0-30);}
+  return c.toDataURL('image/jpeg',.8);}
+async function sendSnap(){const go=$('#snapGo');go.disabled=true;go.innerHTML='<span class="spin"></span>';
+  let img=SNAP.img;try{img=await composeSnap();}catch(_){}
+  if(AI&&AI_IMG){try{const r=await AI.json(`Does this image contain nudity, sexual content, graphic violence or gore? It will be sent in a chat on an app used by teenagers. Return JSON only: {"safe":true|false}`,{images:[dataUrlToBlob(img)],modelTier:'quick'});
+    if(r&&r.safe===false){closeSnap();openSheet(`<div class="verdict bad"><span></span><span><b>${t('Photo blocked')}</b><br>${t('This image is not allowed on R-Style.')}</span></div>`);return;}}catch(_){}}
+  const f=filterById(SNAP.filter);const to=SNAP.to,once=SNAP.once;closeSnap();
+  pushMsg(to,{f:'me',img:await downscale(img,560,.78),once,filter:f.k!=='none'?fName(f):null});}
+
+/* ====================== STORIES: cube between friends ====================== */
+let cubeDir=0;
+const _next=next,_prevSeg=prevSeg;
+next=function(){const list=segs(ST.owners[ST.o]);if(ST.s>=list.length-1&&ST.o<ST.owners.length-1)cubeDir=1;_next();};
+prevSeg=function(){if(ST.s===0&&ST.o>0)cubeDir=-1;_prevSeg();};
+const _loadSeg=loadSeg;
+loadSeg=function(){const b=$('#stBody');let ghost=null;
+  if(cubeDir&&b&&b.animate){ghost=b.cloneNode(true);ghost.id='';ghost.classList.add('cubeOut');b.parentNode.insertBefore(ghost,b);}
+  _loadSeg();
+  if(ghost){const d=cubeDir;const opt={duration:520,easing:'cubic-bezier(.45,.05,.3,1)',fill:'both'};
+    ghost.style.transformOrigin=d>0?'right center':'left center';b.style.transformOrigin=d>0?'left center':'right center';
+    const a=ghost.animate([{transform:'translateX(0) rotateY(0deg)'},{transform:`translateX(${d>0?'-100%':'100%'}) rotateY(${d>0?-90:90}deg)`}],opt);
+    const k=b.animate([{transform:`translateX(${d>0?'100%':'-100%'}) rotateY(${d>0?90:-90}deg)`},{transform:'translateX(0) rotateY(0deg)'}],opt);
+    ST.paused=true;a.onfinish=()=>{ghost.remove();};k.onfinish=()=>{k.cancel();b.style.transformOrigin='';ST.paused=false;ST.last=performance.now();};}
+  cubeDir=0;};
+
+/* ====================== SHORTS: Gold ad every few posts for free users (skip after 3 s) ====================== */
+const _feedList=feedList;
+feedList=function(){const l=_feedList();if(S.vip||l.length<7)return l;const out=[];l.forEach((p,i)=>{out.push(p);if(i>=5&&(i-5)%7===0&&i<l.length-1)out.push({id:'__ad'+i,ad:true});});return out;};
+const _renderFeed=renderFeed;
+renderFeed=function(){_renderFeed();const c=challengeToday();
+  $$('#feed .short').forEach(el=>{if(!String(el.dataset.id).startsWith('__ad'))return;
+    el.className='short adShort';el.innerHTML=`<div class="adGlow"></div><span class="adTag">${SV(ICONS.crown,'fill="currentColor"')}${t('Gold Style · sponsored')}</span>
+      <div class="adLooks">${['u3','u1','u2'].map((u,i)=>`<span style="background:${GRADS[(i*3)%GRADS.length]}">${ic(['dress','top','outer'][i])}</span>`).join('')}</div>
+      <div class="adTxt"><small>${t('DAILY CHALLENGE')}</small><b>${t('Your friends are playing «{x}».',{x:esc(t(c.theme))})}</b><p>${t('A theme every day chosen by Ruby. For Gold members.')}</p></div>
+      <button class="adGo" data-adgo="1">${t('Try Gold · 7 days free')}</button><div class="adSkip"><span>${t('You can skip in {n}',{n:'<i>3</i>'})}</span></div>`;});
+  hydrate($('#feed'));watchAds();};
+let adObs=null;const adSeen=new Set();
+function watchAds(){if(adObs)adObs.disconnect();if(!('IntersectionObserver' in window))return;const feed=$('#feed');
+  adObs=new IntersectionObserver(es=>es.forEach(en=>{const el=en.target;const id=el.dataset.id;if(!en.isIntersecting||en.intersectionRatio<.85||adSeen.has(id))return;adSeen.add(id);
+    feed.classList.add('locked');let n=3;const sk=el.querySelector('.adSkip');
+    const tick=()=>{if(n<=0){feed.classList.remove('locked');sk.innerHTML=`<span>${t('Swipe up to skip')}</span>`;sk.classList.add('done');return;}sk.innerHTML=`<span>${t('You can skip in {n}',{n:`<i>${n}</i>`})}</span>`;n--;setTimeout(tick,1000);};tick();}),{root:feed,threshold:[.85]});
+  feed.querySelectorAll('.adShort').forEach(el=>adObs.observe(el));}
+document.addEventListener('click',e=>{if(e.target.closest('[data-adgo]'))openVip('shorts');});
+
+/* ====================== RUBY: short answers, bigger text, modest styles ====================== */
+const RUBY9=RUBY.replace('Keep answers under 110 words, max 1 emoji.','Keep answers SHORT: 2 short sentences, under 40 words, max 1 emoji.')+` You know modest dress codes (Jewish tzniut, Muslim hijab, Christian, Sikh, Hindu and others) and respect them; never guess or mention someone's religion.`;
+const _userCtx=userCtx;
+userCtx=function(){let c=_userCtx();if(S.modest==='always')c+='\nThe user dresses modestly: ONLY suggest covered outfits (long skirts or loose trousers, long sleeves, high neckline; respect headwear).';else if(S.modest==='sometimes')c+='\nThe user sometimes dresses modestly: offer a covered option when relevant.';return c;};
+const MODEST_RX=/(long|maxi|longue|ארוכ|طويل|abaya|hijab|tichel|foulard|scarf|kippa|כיפה|מטפחת|حجاب|skirt|jupe|חצאית|تنورة)/i;
+function modestSignal(){const p=me();if((p.styles||[]).includes('Modest'))return true;const it=S.wardrobe;if(it.length<3)return false;const m=it.filter(i=>MODEST_RX.test(i.name)).length;const shortish=it.filter(i=>/short|mini|crop|קצר|قصير/i.test(i.name)).length;return m>=3&&m>it.length*.5&&!shortish;}
+const _renderRuby=renderRuby;
+renderRuby=function(){
+  if(!S.modestAsked&&modestSignal()&&!S.ruby.some(m=>m.modestQ)){S.ruby.push({role:'assistant',text:t('You wear mostly **long** clothes. Shall I keep this style?'),modestQ:1});save();}
+  _renderRuby();
+  const q=S.ruby.findIndex(m=>m.modestQ);
+  if(q>=0&&!S.modestAsked){const box=$('#rubyMsgs');box.insertAdjacentHTML('beforeend',`<div class="mq">${[['always','Yes'],['sometimes','Sometimes'],['no','No thanks']].map(([k,l])=>`<button data-mq="${k}">${t(l)}</button>`).join('')}</div>`);box.scrollTop=box.scrollHeight;}};
+$('#rubyMsgs').addEventListener('click',e=>{const b=e.target.closest('[data-mq]');if(!b)return;S.modest=b.dataset.mq;S.modestAsked=true;
+  S.ruby.push({role:'user',text:b.textContent});S.ruby.push({role:'assistant',text:t('Noted! Changeable in Settings › My style.')});S.today=null;S.week=null;save();renderRuby();});
+/* Ruby uses the short prompt */
+$('#rubyForm').onsubmit=async e=>{e.preventDefault();if(rubyBusy)return;
+  const inp=$('#rubyInput');const text=inp.value.trim();if(!text&&!rubyImg)return;
+  if(!AI){toast(t('Ruby works when the app is opened in Claude.'));return;}
+  if(rubyLeft()<=0){toast(t('No free questions left today'));openVip('ruby');return;}
+  const img=rubyImg;rubyImg=null;inp.value='';
+  S.ruby.push({role:'user',text:text||'…',img:img?await downscale(img,360,.7):null});if(!S.vip)S.rubyDay.n++;save();renderRuby();
+  const box=$('#rubyMsgs');const d=document.createElement('div');d.className='m them';d.innerHTML='<span class="spin"></span>';box.appendChild(d);box.scrollTop=box.scrollHeight;
+  rubyBusy=true;$('#rubySend').disabled=true;
+  const hist=S.ruby.filter(m=>!m.modestQ).slice(-10).map(m=>({role:m.role,content:m.text+(m.img?' [photo attached]':'')}));while(hist.length&&hist[0].role!=='user')hist.shift();
+  hist[0]={role:'user',content:`${RUBY9}\n\n${userCtx()}\n\n---\n${hist[0].content}`};
+  try{const opts={cache:false,onText:({text})=>{d.innerHTML=md(text);box.scrollTop=box.scrollHeight;}};if(img&&AI_IMG)opts.images=[dataUrlToBlob(img)];
+    const r=await AI(hist,opts);S.ruby.push({role:'assistant',text:r.text||'…'});if(S.ruby.length>40)S.ruby=S.ruby.slice(-40);save();
+  }catch(err){d.textContent=aiErr(err);if(!S.vip)S.rubyDay.n=Math.max(0,S.rubyDay.n-1);S.ruby.pop();save();}
+  rubyBusy=false;$('#rubySend').disabled=false;if(current==='ruby')renderRuby();};
+
+/* ====================== WARDROBE: accessories (incl. head accessories) ====================== */
+[{id:'s11',name:'Silk scarf',cat:'Accessory',bg:'#f6f1ea',color:'#c8a27a',colorName:'beige',warmth:'any'},
+ {id:'s12',name:'Cap',cat:'Accessory',bg:'#ececef',color:'#111111',colorName:'black',warmth:'any'},
+ {id:'s13',name:'Gold necklace',cat:'Accessory',bg:'#fbf5e6',color:'#d4af37',colorName:'gold',warmth:'any'},
+ {id:'s14',name:'Sunglasses',cat:'Accessory',bg:'#ececef',color:'#1f1f1f',colorName:'black',warmth:'any'},
+ {id:'s15',name:'Leather belt',cat:'Accessory',bg:'#eadfd6',color:'#5b3a23',colorName:'brown',warmth:'any'}].forEach(x=>{if(!SAMPLE_WARDROBE.some(y=>y.id===x.id))SAMPLE_WARDROBE.push(x);});
+/* translate sample item names */
+const _allItems=allItems;allItems=function(){return _allItems().map(i=>i.id&&i.id.startsWith('s')&&window.I18N&&(window.I18N[S.lang]||{})[i.name]?Object.assign({},i,{name:t(i.name)}):i);};
+
+/* ====================== SETTINGS: visible log out + my style ====================== */
+const _renderSettings=renderSettings;
+renderSettings=function(){_renderSettings();const body=$('#setBody');
+  const old=$('#logout');if(old)old.closest('.srow').remove();
+  const act=[...body.querySelectorAll('.sect')].find(x=>x.textContent===t('Account actions'));
+  const style=`<div class="sect">${t('My style')}</div><div class="srow"><div class="l"><b>${t('Modest outfits')}</b></div><select class="sel" id="selModest">${[['no','Never'],['sometimes','Sometimes'],['always','Always']].map(([k,l])=>`<option value="${k}" ${(S.modest||'no')===k?'selected':''}>${t(l)}</option>`).join('')}</select></div>`;
+  if(act)act.insertAdjacentHTML('beforebegin',style);
+  const del=$('#delAcc');del.insertAdjacentHTML('beforebegin',`<button class="btn sm logoutBtn" id="logout9">${t('Log out')}</button>`);
+  $('#selModest').onchange=e=>{S.modest=e.target.value;S.modestAsked=true;S.today=null;S.week=null;save();};
+  $('#logout9').onclick=()=>{openSheet(`<h3>${t('Log out of R-Style?')}</h3><button class="btn primary" id="loYes" style="margin-top:12px">${t('Log out')}</button><button class="btn" id="loNo" style="margin-top:6px">${t('Cancel')}</button>`);
+    $('#loYes').onclick=()=>{S.profile=null;save();location.reload();};$('#loNo').onclick=closeSheet;};};
+
+/* perks list: voice messages are for everyone now; daily challenge is Gold */
+(function(){const _applyLang=applyLang;applyLang=function(){_applyLang();$('#vipList').innerHTML=[['avatar','Full 3D avatar: all rooms, hairstyles, makeup and moves'],['calendar','Ruby plans your whole week'],['trend','Monthly trend report'],['bag','What\'s missing in my wardrobe'],['sparkle','Unlimited Ruby'],['flame','DAILY CHALLENGE'],['filters','Gold filter'],['crown','Gold profile + crown'],['trophy','Monthly contests']].map(([e,s])=>`<li>${ic(e)}${t(s)}</li>`).join('');};})();
+
+/* scrolling areas for new screens */
+document.addEventListener('touchmove',e=>{if(e.target.closest('#ciBody,.fring,.thGrid,#peek .pkMsgs'))e.stopPropagation();},{capture:true,passive:true});
+
+/* ---------- start v9 ---------- */
+document.querySelectorAll('i[data-ic]').forEach(el=>{el.innerHTML=SV(ICONS[el.dataset.ic]||ICONS.star);});applyLang();if(current)show(current);
+
+/* ====================== v9.2: open chat = small dot that grows; close = shrinks back to a dot ====================== */
+let roomOrigin=null;
+function rowDot(id){const el=document.querySelector(`.crow[data-room="${CSS.escape(id)}"] .av`);if(!el)return null;const r=el.getBoundingClientRect(),a=$('#app').getBoundingClientRect();if(!r.width)return null;return {x:r.left-a.left+r.width/2,y:r.top-a.top+r.height/2};}
+const _openRoom9=openRoom;
+openRoom=function(id){const from=current==='chat'?rowDot(id):null;_openRoom9(id);const room=$('#room');
+  roomOrigin=from||{x:$('#app').clientWidth/2,y:$('#app').clientHeight/2};
+  if(room.animate){const {x,y}=roomOrigin;room.animate([{clipPath:`circle(6px at ${x}px ${y}px)`},{clipPath:`circle(150% at ${x}px ${y}px)`}],{duration:560,easing:'cubic-bezier(.6,0,.25,1)'});}};
+function closeRoom(){const room=$('#room');const id=roomId;
+  room.classList.add('closing');show('chat');const to=rowDot(id)||roomOrigin||{x:$('#app').clientWidth/2,y:$('#app').clientHeight/2};
+  if(!room.animate){room.classList.remove('closing');return;}
+  const a=room.animate([{clipPath:`circle(150% at ${to.x}px ${to.y}px)`,opacity:1},{clipPath:`circle(7px at ${to.x}px ${to.y}px)`,opacity:1,offset:.82},{clipPath:`circle(0px at ${to.x}px ${to.y}px)`,opacity:0}],{duration:430,easing:'cubic-bezier(.4,0,.2,1)'});
+  a.onfinish=()=>room.classList.remove('closing');}
+$('#roomBack').onclick=closeRoom;
+/* ads in Shorts: rare (after 6 looks, then every 15) */
+feedList=function(){const l=_feedList();if(S.vip||l.length<7)return l;const out=[];l.forEach((p,i)=>{out.push(p);if(i>=5&&(i-5)%15===0&&i<l.length-1)out.push({id:'__ad'+i,ad:true});});return out;};
+/* swipe the chat sideways (left or right) to leave it */
+(function(){const room=$('#room');let x0=null,y0=0,dx=0,horiz=null;
+  room.addEventListener('touchstart',e=>{if(e.target.closest('.composer,input,.roomHead button'))return;const t0=e.touches[0];x0=t0.clientX;y0=t0.clientY;dx=0;horiz=null;},{passive:true});
+  room.addEventListener('touchmove',e=>{if(x0==null)return;const t0=e.touches[0];dx=t0.clientX-x0;const dy=t0.clientY-y0;
+    if(horiz===null&&(Math.abs(dx)>10||Math.abs(dy)>10))horiz=Math.abs(dx)>Math.abs(dy)*1.3;
+    if(horiz){room.style.transform=`translateX(${dx*.85}px)`;room.style.transition='none';}},{passive:true});
+  room.addEventListener('touchend',()=>{if(x0==null)return;x0=null;
+    if(horiz&&Math.abs(dx)>80){slideOut(dx);}
+    else{room.style.transition='transform .25s';room.style.transform='';setTimeout(()=>room.style.transition='',260);}});})();
+
+/* swipe exit = page change: the chat leaves on one side, the list comes in from the other side */
+function slideOut(dx){const room=$('#room');const dir=dx>0?1:-1;const W=$('#app').clientWidth;
+  room.classList.add('closing');room.style.transform='';show('chat');const list=$('#chat');
+  if(!room.animate){room.classList.remove('closing');return;}
+  const opt={duration:340,easing:'cubic-bezier(.25,.8,.3,1)',fill:'both'};
+  const a=room.animate([{transform:`translateX(${dx*.85}px)`},{transform:`translateX(${dir*W}px)`}],opt);
+  const b=list.animate([{transform:`translateX(${-dir*W}px)`},{transform:'translateX(0)'}],opt);
+  a.onfinish=()=>{room.classList.remove('closing');a.cancel();};b.onfinish=()=>b.cancel();}
+
+/* nav bar: the dark circle slides from one button to the other */
+(function(){const nav=$('#nav');const pill=document.createElement('span');pill.className='npill';nav.prepend(pill);
+  let shown=false;
+  window.movePill=function(){const on=nav.querySelector('button.on');if(!nav.classList.contains('show')||!on){pill.style.opacity=0;shown=false;return;}
+    const x=on.offsetLeft,w=on.offsetWidth;if(!shown){pill.style.transition='none';}
+    pill.style.width=w+'px';pill.style.transform=`translateX(${x}px)`;pill.style.opacity=1;
+    if(!shown){void pill.offsetWidth;pill.style.transition='';shown=true;}};
+  const _show=show;show=function(id){if(NAV.includes(id)){nav.classList.add('show');$$('#nav [data-go]').forEach(b=>b.classList.toggle('on',b.dataset.go===id));movePill();}try{_show(id);}finally{movePill();}};
+  window.addEventListener('resize',()=>{shown=false;movePill();});
+  movePill();})();
+
+/* ====================== v9.5: friends can call; Subscriptions row like YouTube ====================== */
+/* friends = people you follow (they follow back in the demo). Your first friends are seeded once. */
+if(!S.seedFollow){['u1','u2','u3'].forEach(u=>{if(!S.following[u]){S.following[u]=true;USERS[u].followers++;}});S.seedFollow=true;save();}
+isFriend=function(id){return !!USERS[id]&&!!S.following[id]&&!S.blocked[id];};
+const _toggleFollow=toggleFollow;
+toggleFollow=function(uid){_toggleFollow(uid);if(S.following[uid])toast(t('You are now friends with {n}: you can call them',{n:firstName(USERS[uid].name)}));if(current==='shorts'&&feedMode==='following')renderSubs();};
+/* subscriptions row */
+let subSel=null;
+const _feedList95=feedList;
+feedList=function(){let l=_feedList95();if(feedMode==='following'){l=l.filter(p=>!p.ad);if(subSel)l=l.filter(p=>p.u===subSel);}return l;};
+function renderSubs(){const row=$('#subsRow');const subs=Object.keys(USERS).filter(u=>S.following[u]&&!S.blocked[u]);
+  row.hidden=feedMode!=='following';if(row.hidden)return;
+  if(subSel&&!subs.includes(subSel))subSel=null;
+  row.innerHTML=`<button class="sub all ${subSel?'':'on'}" data-sub=""><span class="ring"><span class="in">${SV(ICONS.group)}</span></span><small>${t('All')}</small></button>`+
+    subs.map(u=>`<button class="sub ${subSel===u?'on':''}" data-sub="${u}"><span class="ring">${avHTML(u,52)}</span><small>${esc(firstName(USERS[u].name))}</small></button>`).join('')+
+    (subs.length?'':`<span class="subsEmpty">${t('Follow creators in “For you” to see their looks here.')}</span>`);}
+$('#subsRow').onclick=e=>{const b=e.target.closest('[data-sub]');if(!b)return;subSel=b.dataset.sub||null;renderFeed();};
+const _renderFeed95=renderFeed;
+renderFeed=function(){_renderFeed95();renderSubs();$('#feed').classList.toggle('withSubs',feedMode==='following');};
+(function(){const T={'All':['Tous','הכל','الكل'],'You are now friends with {n}: you can call them':['Tu es ami avec {n} : tu peux l\'appeler','את/ה חבר/ה של {n}: אפשר להתקשר','أنت الآن صديق {n}: يمكنك الاتصال به']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
+
+/* ====================== v9.6: Subscriptions = grid of small videos (like YouTube), tap a circle = that person's videos, newest first ====================== */
+let subView='grid',subList=[],subStart=0;
+function subVideos(){const subs=Object.keys(USERS).filter(u=>S.following[u]&&!S.blocked[u]&&(!subSel||u===subSel));const out=[];
+  subs.forEach((u,ui)=>{const base=SAMPLE_SHORTS.filter(s=>s.u===u);if(!base.length)return;const n=subSel?9:5;
+    for(let k=0;k<n;k++){const b=base[k%base.length];out.push(Object.assign({},b,{id:b.id+'~'+k,g:(b.g+k)%GRADS.length,look:b.look.slice(k%2).concat(b.look.slice(0,k%2)),likes:Math.round(b.likes*(1-k*.08)),ts:Date.now()-((ui*5+k*9+1)*3.3)*36e5}));}});
+  return out.sort((a,b)=>b.ts-a.ts);}
+function ago(ts){const h=Math.max(1,Math.round((Date.now()-ts)/36e5));return h<24?t('{n} h ago',{n:h}):t('{n} d ago',{n:Math.round(h/24)});}
+const _feedList96=feedList;
+feedList=function(){if(feedMode==='following'){return subView==='play'?subList.slice(subStart):[];}return _feedList96();};
+const _renderFeed96=renderFeed;
+renderFeed=function(){const feed=$('#feed');
+  if(feedMode==='following'&&subView==='grid'){$$('.shortsTop .tab').forEach(b=>b.classList.toggle('on',b.dataset.mode===feedMode));renderSubs();
+    subList=subVideos();feed.classList.add('gridMode');feed.classList.remove('withSubs');
+    const who=subSel?USERS[subSel]:null;
+    feed.innerHTML=`<div class="subHead"><b>${who?esc(who.name):t('All my subscriptions')}</b><small>${t('Newest first')}</small></div>`+
+      (subList.length?`<div class="vgrid9">${subList.map((p,i)=>`<button class="vcell" data-vi="${i}" style="background:${GRADS[p.g||0]}"><span class="vt">${ago(p.ts)}</span><span class="vl">${(p.look||[]).slice(0,3).map(x=>ic(EMO2IC[x]||'top')).join('')}</span><span class="vb">${who?'':avHTML(p.u,22)}<span>${SV(ICONS.play)}${fmt(p.likes)}</span></span></button>`).join('')}</div>`
+      :`<div class="emptyFeed"><b>${t('No looks here yet')}</b><span>${t('Follow creators in “For you” to see their looks here.')}</span></div>`);
+    feed.scrollTop=0;return;}
+  feed.classList.remove('gridMode');_renderFeed96();
+  if(feedMode==='following'&&subView==='play'){$('#subsRow').hidden=true;feed.classList.remove('withSubs');
+    if(!$('#subBack')){$('#shorts').insertAdjacentHTML('beforeend',`<button class="subBack" id="subBack" aria-label="Back">${SV('<path d="M15 5l-7 7 7 7"/>')}</button>`);$('#subBack').onclick=()=>{subView='grid';renderFeed();};}
+    $('#subBack').hidden=false;}else{const sb=$('#subBack');if(sb)sb.hidden=true;}};
+$('#feed').addEventListener('click',e=>{const c=e.target.closest('[data-vi]');if(!c)return;subStart=+c.dataset.vi;subView='play';renderFeed();});
+$('#subsRow').onclick=e=>{const b=e.target.closest('[data-sub]');if(!b)return;subSel=b.dataset.sub||null;subView='grid';renderFeed();};
+$$('.shortsTop .tab').forEach(b=>b.addEventListener('click',()=>{subView='grid';}, true));
+(function(){const T={'All my subscriptions':['Tous mes abonnements','כל המנויים שלי','كل اشتراكاتي'],'Newest first':['Du plus récent au plus ancien','מהחדש לישן','الأحدث أولًا'],'{n} h ago':['il y a {n} h','לפני {n} שע\'','قبل {n} س'],'{n} d ago':['il y a {n} j','לפני {n} ימים','قبل {n} ي']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
+
+/* v9.7: Ruby = 7 free questions a day (unlimited in Gold) */
+const RUBY_FREE9=7;
+rubyLeft=function(){if(S.vip)return Infinity;if(S.rubyDay.d!==today())S.rubyDay={d:today(),n:0};return Math.max(0,RUBY_FREE9-S.rubyDay.n);};

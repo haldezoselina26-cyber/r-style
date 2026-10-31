@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>R-Style</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="R-Style">
+<meta name="theme-color" content="#0B0B0D">
+</head>
+<body>
+<div id="app">
+
+<!-- LANGUAGE -->
+<section class="screen" id="lang">
+  <button class="back" id="langBack" aria-label="Back" style="margin-bottom:14px" hidden><span class="chev">‹</span></button>
+  <h1>Language</h1>
+  <div class="muted">Choose your language · Choisis ta langue · בחר שפה · اختر لغتك</div>
+  <div class="langs" id="langList"></div>
+  <button class="btn primary" id="langGo" style="margin-top:14px" disabled>Continue</button>
+</section>
+
+<!-- SPLASH -->
+<section class="screen" id="splash">
+  <button class="langPill" id="splashLang"><i data-ic="globe"></i><span id="splashLangName"></span></button>
+  <div class="hero">
+    <div class="mark">R</div>
+    <h1 class="logo" style="color:#fff">R<b>·</b>Style</h1>
+    <p data-t="Your smart wardrobe, AI stylist and fashion community."></p>
+  </div>
+  <div class="actions">
+    <button class="btn primary" id="enterBtn" data-t="Enter"></button>
+    <button class="btn gold" id="vipBtn"><i data-ic="crown"></i><span data-t="VIP Access"></span></button>
+  </div>
+</section>
+
+<!-- VIP -->
+<section class="screen" id="vip">
+  <button class="x" id="vipClose">✕</button>
+  <div class="vhead"><div class="gmark">G</div><h2 class="goldtxt">Gold Style</h2><p data-t="Everything in R-Style, in gold."></p></div>
+  <ul id="vipList"></ul>
+  <div class="plans">
+    <button class="plan on" data-plan="month"><small data-t="Monthly"></small><b>10 ₪</b><small data-t="per month"></small></button>
+    <button class="plan" data-plan="year"><span class="save">-17%</span><small data-t="Yearly"></small><b>100 ₪</b><small data-t="per year"></small></button>
+  </div>
+  <button class="btn goldbtn" id="vipActivate" data-t="Start 7-day free trial"></button>
+  <button class="btn" id="vipLater" style="margin-top:6px;color:#bfae7a" data-t="Maybe later"></button>
+  <div class="note" id="vipNote"></div>
+</section>
+
+<!-- SIGN-UP -->
+<section class="screen" id="signup">
+  <div class="bar"><button class="back" id="suBack"><span class="chev">‹</span></button><div class="dots" id="suDots"></div></div>
+  <div class="step" data-s="0">
+    <h2 data-t="What's your email?"></h2><p class="muted" data-t="We'll send you a code to check it's really you."></p>
+    <input class="field" id="suEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com">
+    <div class="err" id="emailErr"></div>
+  </div>
+  <div class="step" data-s="1">
+    <h2 data-t="Enter your code"></h2><p class="muted" id="codeSub"></p>
+    <div class="demo" id="codeDemo"></div>
+    <input class="field code" id="suCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="••••••">
+    <div class="err" id="codeErr"></div>
+    <button class="link" id="resend" data-t="Send a new code"></button>
+  </div>
+  <div class="step" data-s="2">
+    <h2 data-t="Choose your username"></h2><p class="muted" data-t="This is how people find you."></p>
+    <div class="uname"><span>@</span><input class="field" id="suUser" autocapitalize="none" autocomplete="off" maxlength="20" placeholder="your.name"></div>
+    <div id="userMsg" class="err"></div>
+  </div>
+  <div class="step" data-s="3">
+    <h2 data-t="Profile photo"></h2><p class="muted" data-t="Optional — you can add it later."></p>
+    <button class="photoPick" id="suPhoto"><i data-ic="camera"></i></button>
+    <button class="link" id="suPhotoSkip" style="align-self:center" data-t="Skip for now"></button>
+  </div>
+  <div class="step" data-s="4">
+    <h2 data-t="Your gender"></h2><p class="muted" data-t="This sets your design and Ruby's suggestions."></p>
+    <div class="genders">
+      <button class="gcard" data-g="woman"><span class="s">👩</span><span data-t="Woman"></span></button>
+      <button class="gcard" data-g="man"><span class="s">👨</span><span data-t="Man"></span></button>
+      <button class="gcard" data-g="none"><span class="s">🙂</span><span data-t="Prefer not to say"></span></button>
+    </div>
+    <div class="themes" id="themes">
+      <button data-th="light"><span style="background:#fff;border:1px solid #ddd"></span><span data-t="White"></span></button>
+      <button data-th="dark"><span style="background:linear-gradient(135deg,#0b0b0c,#3a3a40)"></span><span data-t="Black"></span></button>
+    </div>
+  </div>
+  <div class="step" data-s="5">
+    <h2 data-t="How old are you?"></h2><p class="muted" data-t="You must be 13 or older."></p>
+    <input class="field" id="suAge" type="number" inputmode="numeric" min="13" max="99" data-tp="Age">
+    <div class="err" id="ageErr"></div>
+  </div>
+  <div class="step" data-s="6">
+    <h2 data-t="Your personal style"></h2><p class="muted" data-t="Pick at least one. Ruby learns from it."></p>
+    <div class="styles" id="styleChips"></div>
+    <textarea class="field" id="suTruth" data-tp="Your style in your own words (optional)"></textarea>
+  </div>
+  <div class="stepnav"><button class="btn primary" id="suNext" disabled></button></div>
+</section>
+
+<!-- HOME -->
+<section class="screen navpad" id="home">
+  <div class="top">
+    <div class="logo" id="homeLogo">R<b>·</b>Style</div>
+    <div style="display:flex;gap:10px"><button class="hbtn" id="rubyBtn" aria-label="Ruby"><i data-ic="sparkle"></i></button><button class="hbtn crownBtn" id="crownBtn" aria-label="Gold Style"><i data-ic="crown"></i></button></div>
+  </div>
+  <button class="scoreCard" id="scoreCard">
+    <div class="ring2"><svg width="70" height="70"><circle cx="35" cy="35" r="29" stroke="var(--line)" stroke-width="7" fill="none"/><circle id="scoreArc" cx="35" cy="35" r="29" stroke="var(--accent)" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="182.2" stroke-dashoffset="182.2" style="transition:stroke-dashoffset 1s"/></svg><b id="scoreNum">—</b></div>
+    <div style="flex:1;min-width:0"><h3>AI Style Score</h3><p class="muted" id="scoreTxt"></p></div>
+  </button>
+  <div id="todayWrap" class="todayWrap"><div class="outfits" id="outfits"></div><div class="dotsRow" id="outDots"></div></div>
+  <div id="vipHome"></div>
+</section>
+
+<!-- WARDROBE -->
+<section class="screen navpad" id="wardrobe">
+  <div class="top"><h1 class="title" data-t="Wardrobe"></h1><div style="display:flex;gap:8px"><button class="hbtn solid" id="wAdd" aria-label="Add"><i data-ic="plus"></i></button></div></div>
+  <div class="segTabs"><button data-wt="avatar" class="on" data-t="Avatar"></button><button data-wt="items" data-t="Clothes"></button><button data-wt="outfits" data-t="Outfits"></button></div>
+  <div id="wAv">
+    <div class="stage" id="avStage"><div class="hint" id="avHint"></div><div class="animBar" id="animBar"></div></div>
+    <div class="avChips" id="avChips"></div>
+    <div class="slots" id="avSlots"></div>
+  </div>
+  <div class="filters" id="wFilters"></div>
+  <div class="filters" id="wSeason"></div>
+  <div class="wbody" id="wBody"></div>
+</section>
+
+<!-- CAMERA -->
+<section class="screen" id="camera">
+  <video id="video" playsinline muted autoplay></video>
+  <img id="shot" alt="">
+  <div class="grid9 on" id="grid9"><i></i><i></i><i></i><i></i><em></em></div>
+  <div class="camFallback" id="camFallback">
+    <div class="big"><i data-ic="camera"></i></div><b data-t="Open your camera"></b>
+    <p data-t="Live preview isn't available here. Tap below to open your phone's camera. The 9-grid is shown on your photo so you can check the framing."></p>
+    <button class="btn primary" id="nativeCamBtn" style="max-width:280px" data-t="Take a photo"></button>
+    <button class="btn ghost" id="camGalleryBtn2" style="max-width:280px;color:#fff;border-color:#444" data-t="Choose from gallery"></button>
+  </div>
+  <div class="flash" id="flash"></div>
+  <div class="camTop"><button id="camClose">✕</button><span data-t="Scan your clothes"></span><button id="gridBtn" class="on">#</button></div>
+  <div class="camHint" id="camHint" data-t="Wear it in the mirror, or lay it flat"></div>
+  <div class="camBottom" id="camLive"><button class="sm" id="camGalleryBtn"><i data-ic="image"></i></button><button class="shutter" id="shutter"></button><button class="sm" id="flipBtn"><i data-ic="spin"></i></button></div>
+  <div class="camBottom" id="camReview" hidden><button class="btn ghost" id="retake" style="color:#fff;border-color:#555" data-t="Retake"></button><button class="btn primary" id="usePhoto" data-t="Use photo"></button></div>
+</section>
+
+<!-- SHORTS -->
+<section class="screen" id="shorts">
+  <div class="shortsTop"><button class="tab" data-mode="following" data-t="Following"></button><button class="tab on" data-mode="foryou" data-t="For you"></button><button class="post" id="newPost" aria-label="Post">＋</button></div>
+  <div class="subsRow" id="subsRow" hidden></div>
+  <div id="feed"></div>
+</section>
+
+<!-- ME -->
+<section class="screen navpad" id="me">
+  <div class="ohead"><b id="meHandle" style="font-size:20px"></b><button class="pillbtn" id="meSettings"><i data-ic="gear"></i><span data-t="Settings"></span></button></div>
+  <div class="pscroll" id="meBody"></div>
+</section>
+
+<!-- CHAT -->
+<section class="screen navpad" id="chat">
+  <div class="top"><h1 class="title" data-t="Messages"></h1><div style="display:flex;gap:10px"><button class="hbtn" id="searchBtn" aria-label="Search"><i data-ic="search"></i></button><button class="hbtn" id="newGroup" aria-label="New group"><i data-ic="group"></i></button></div></div>
+  <label class="search" id="searchBox" hidden><i data-ic="search"></i><input id="chatSearch" data-tp="Search" autocomplete="off"></label>
+  <div class="clist" id="clist"><div id="challenge"></div><div class="storyRow" id="storyRow"></div><div id="convs"></div></div>
+</section>
+
+<!-- ROOM -->
+<section class="screen" id="room">
+  <div class="roomBg" id="roomBg"></div>
+  <div class="msgs" id="msgs"></div>
+  <div class="roomHead" id="roomHead"><button class="back" id="roomBack" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><button class="rwho" id="roomWho"><span class="av" id="roomAv" style="width:38px;height:38px;font-size:14px"></span><b id="roomName"></b></button><button class="rh" id="callBtn" aria-label="Call"><i data-ic="phone"></i></button><button class="rh" id="videoBtn" aria-label="Video call"><i data-ic="video"></i></button></div>
+  <form class="composer floating" id="composer">
+    <button type="button" class="cb" id="attachBtn" aria-label="Attach"><i data-ic="plus"></i></button>
+    <button type="button" class="cb bare" id="snapBtn" aria-label="Camera"><i data-ic="camera"></i></button>
+    <input id="msgInput" autocomplete="off">
+    <button type="button" class="cb bare" id="micBtn" aria-label="Voice"><i data-ic="mic"></i><span class="lk" id="micLock" hidden></span></button>
+    <button type="submit" class="cb send" id="sendBtn" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg></button>
+  </form>
+</section>
+
+<!-- RUBY -->
+<section class="screen" id="ruby">
+  <div class="ohead" style="border-bottom:1px solid var(--line)"><button class="back" id="rubyBack"><span class="chev">‹</span></button><span class="av rubyAv" style="width:38px;height:38px"><i data-ic="sparkle"></i></span><b>Ruby<span class="sub" data-t="Your personal stylist"></span></b></div>
+  <div class="msgs" id="rubyMsgs"></div>
+  <div class="sugg" id="rubySugg"></div>
+  <div class="attach" id="rubyAttach" hidden><img id="rubyAttImg" alt=""><button id="rubyAttX" data-t="Remove"></button></div>
+  <div class="quota" id="rubyQuota"></div>
+  <form class="composer" id="rubyForm">
+    <button type="button" class="cb" id="rubyPhoto"><i data-ic="camera"></i></button>
+    <input id="rubyInput" autocomplete="off">
+    <button type="submit" class="cb send" id="rubySend"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 20.5 21 12 3 3.5l.01 6.6L15 12 3.01 13.9z"/></svg></button>
+  </form>
+</section>
+
+
+<nav id="nav">
+  <button data-go="wardrobe" aria-label="Wardrobe"><i data-ic="hanger"></i></button>
+  <button data-go="chat" aria-label="Chat"><i data-ic="chat"></i><span class="ndot" id="chatDot" hidden></span></button>
+  <button data-go="home" aria-label="Home"><i data-ic="home"></i></button>
+  <button data-go="shorts" aria-label="Shorts"><i data-ic="play"></i></button>
+  <button data-go="me" aria-label="Profile"><span class="av meav" id="navMe"></span></button>
+</nav>
+
+<section class="overlay" id="profile">
+  <div class="ohead"><button class="back" id="profBack"><span class="chev">‹</span></button><b id="profHandle"></b><button class="back" id="profMore">⋯</button></div>
+  <div class="pscroll" id="profBody"></div>
+</section>
+<section class="overlay" id="settings">
+  <div class="ohead"><button class="back" id="setBack"><span class="chev">‹</span></button><b data-t="Settings"></b></div>
+  <div class="pscroll" id="setBody"></div>
+</section>
+
+<div id="story">
+  <div class="bars" id="stBars"></div>
+  <div class="sh"><span class="av" id="stAv"></span><span><span id="stName"></span> <small id="stTime"></small></span><button id="stClose">✕</button></div>
+  <div class="sbody" id="stBody"></div>
+  <div class="cap" id="stCap"></div>
+  <div class="paused">⏸</div>
+</div>
+
+<section class="overlay" id="cinfo">
+  <div class="ohead"><button class="back" id="ciBack"><span class="chev">‹</span></button><b></b></div>
+  <div class="pscroll" id="ciBody"></div>
+</section>
+<div class="full" id="call"></div>
+<div class="full" id="snap"></div>
+<div id="peek"></div>
+<div id="goldFx"><div class="sparks" id="sparks"></div><div class="fxlogo"><span class="fxR">R</span><span class="fxG">G</span></div><h2 class="goldtxt" id="fxTitle"></h2><p id="fxSub"></p></div>
+<section class="overlay" id="trend">
+  <div class="ohead"><button class="back" id="trendBack"><span class="chev">‹</span></button><b data-t="Ruby's trends"></b></div>
+  <div class="pscroll" id="trendBody"></div>
+</section>
+<div id="sheetWrap"><div id="sheet"></div></div>
+<div id="toast"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="avatar3d.js"></script>
+<script src="i18n.js"></script>
+<script src="app.js"></script>
+<script src="v9.js"></script>
+</body>
+</html>
