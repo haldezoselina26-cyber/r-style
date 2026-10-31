@@ -1038,3 +1038,36 @@ const _renderSnap109=renderSnap;renderSnap=function(){_renderSnap109();const s=$
     hold=setTimeout(()=>{held=true;sh.classList.add('vid','holding');startVidRec();},350);};
   sh.onpointerup=()=>{clearTimeout(hold);sh.classList.remove('holding');if(held){stopVidRec();held=false;return;}if(SNAP.stream)snapPhoto();};
   sh.onpointercancel=()=>{clearTimeout(hold);if(held){stopVidRec();held=false;}};sh.oncontextmenu=e=>e.preventDefault();};
+
+/* v11.0 opening intro (like a movie studio logo): original R-Style animation + original sound, every time the app opens */
+(function(){if(/[?&]nointro/.test(location.search))return;
+ const css=document.createElement('style');css.textContent=`
+#rsIntro{position:fixed;inset:0;z-index:100000;background:#000;display:grid;place-items:center;overflow:hidden;cursor:pointer;transition:opacity .45s}
+#rsIntro.out{opacity:0;pointer-events:none}
+#rsIntro .wrap{position:relative;display:flex;align-items:center;font:900 50px/1 Inter,-apple-system,system-ui,sans-serif;letter-spacing:2px;color:#fff}
+#rsIntro .r{display:inline-block;color:#E11D2E;font-size:112px;text-shadow:0 0 30px rgba(225,29,46,.9),0 0 90px rgba(225,29,46,.6);transform:scale(3.2);opacity:0;animation:rsR 1.1s cubic-bezier(.2,.9,.2,1) .15s forwards}
+#rsIntro .rest{display:inline-block;overflow:hidden;max-width:0;white-space:nowrap;animation:rsRest .6s cubic-bezier(.3,.8,.2,1) 1.15s forwards}
+#rsIntro .rest span{display:inline-block;transform:translateX(-30px);opacity:0;animation:rsTxt .5s ease-out 1.25s forwards}
+#rsIntro .beam{position:absolute;left:50%;top:50%;width:2px;height:140vh;background:linear-gradient(180deg,transparent,#E11D2E 40%,#ff6b75 50%,#E11D2E 60%,transparent);transform-origin:center;opacity:0;filter:blur(1px)}
+#rsIntro .beam:nth-child(1){animation:rsBeam 1.2s ease-out .25s forwards;--rot:-18deg}#rsIntro .beam:nth-child(2){animation:rsBeam 1.2s ease-out .32s forwards;--rot:12deg}
+#rsIntro .beam:nth-child(3){animation:rsBeam 1.2s ease-out .4s forwards;--rot:-6deg}#rsIntro .beam:nth-child(4){animation:rsBeam 1.2s ease-out .47s forwards;--rot:24deg}
+#rsIntro .flash{position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,rgba(225,29,46,.55),transparent 55%);opacity:0;animation:rsFlash 1.4s ease-out 1.0s forwards}
+#rsIntro .tagline{position:absolute;bottom:22%;left:0;right:0;text-align:center;color:rgba(255,255,255,.75);font:600 15px/1.4 Inter,system-ui;letter-spacing:6px;opacity:0;animation:rsTag .6s ease-out 1.7s forwards}
+@keyframes rsR{0%{transform:scale(3.2);opacity:0;filter:blur(12px)}60%{opacity:1;filter:blur(0)}100%{transform:scale(1);opacity:1}}
+@keyframes rsRest{to{max-width:300px}}@keyframes rsTxt{to{transform:none;opacity:1}}
+@keyframes rsBeam{0%{opacity:0;transform:translate(-50%,-50%) rotate(var(--rot)) scaleY(.1)}40%{opacity:.9}100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--rot)) scaleY(1.2) translateX(140px)}}
+@keyframes rsFlash{0%{opacity:0}25%{opacity:1}100%{opacity:.25}}@keyframes rsTag{to{opacity:1}}`;document.head.appendChild(css);
+ const el=document.createElement('div');el.id='rsIntro';
+ el.innerHTML='<i class="beam"></i><i class="beam"></i><i class="beam"></i><i class="beam"></i><div class="flash"></div><div class="wrap" dir="ltr"><span class="r">R</span><span class="rest"><span>-STYLE</span></span></div><div class="tagline">STYLE · AI · FRIENDS</div>';
+ document.body.appendChild(el);
+ /* original sound: deep "boom" + bright rising chord (made with Web Audio, no music files) */
+ let played=false;function sound(){if(played)return;try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const c=new A();if(c.state==='suspended')c.resume();const t=c.currentTime+.05;played=true;
+   const master=c.createGain();master.gain.value=.55;master.connect(c.destination);
+   const boom=c.createOscillator(),bg=c.createGain();boom.type='sine';boom.frequency.setValueAtTime(110,t);boom.frequency.exponentialRampToValueAtTime(38,t+.9);bg.gain.setValueAtTime(0,t);bg.gain.linearRampToValueAtTime(1,t+.02);bg.gain.exponentialRampToValueAtTime(.001,t+1.4);boom.connect(bg).connect(master);boom.start(t);boom.stop(t+1.5);
+   const n=c.createBufferSource(),buf=c.createBuffer(1,c.sampleRate*.4,c.sampleRate),d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);n.buffer=buf;const nf=c.createBiquadFilter();nf.type='lowpass';nf.frequency.value=900;const ng=c.createGain();ng.gain.value=.5;n.connect(nf).connect(ng).connect(master);n.start(t);
+   [[293.66,1.0],[440,1.06],[587.33,1.12],[880,1.2]].forEach(([f,dl])=>{const o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(0,t+dl);g.gain.linearRampToValueAtTime(.18,t+dl+.04);g.gain.exponentialRampToValueAtTime(.001,t+dl+1.6);o.connect(g).connect(master);o.start(t+dl);o.stop(t+dl+1.7);});
+   setTimeout(()=>{try{c.close();}catch(_){}},3500);}catch(_){}}
+ sound();
+ let done=false;const finish=()=>{if(done)return;done=true;el.classList.add('out');setTimeout(()=>el.remove(),500);};
+ el.addEventListener('pointerdown',()=>{if(!played)sound();else finish();});
+ setTimeout(finish,2900);})();
