@@ -724,3 +724,48 @@ const _renderSettings99=renderSettings;renderSettings=function(){_renderSettings
  'Your gift: a birthday filter and a cake badge on your profile.':['Ton cadeau : un filtre anniversaire et un badge gâteau sur ton profil.','המתנה שלך: פילטר יום הולדת ותג עוגה בפרופיל.','هديتك: فلتر عيد ميلاد وشارة كعكة في ملفك.'],
  'Birthday today! Wish them a happy birthday':['C\'est son anniversaire ! Souhaite-lui','יום הולדת היום! תאחל/י מזל טוב','عيد ميلاده اليوم! هنّئه']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
 applyLang();bdayCheck();if(current)show(current);
+
+/* v10.1 voice like WhatsApp: hold to record, release to send, slide up to lock, slide sideways to cancel */
+(function(){const T={'Slide to cancel':['Glisse pour annuler','החלק לביטול','اسحب للإلغاء'],'Hold to record':['Maintiens pour enregistrer','החזק כדי להקליט','اضغط مطولاً للتسجيل']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});
+ const css=document.createElement('style');css.textContent=`
+#micBtn{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.composer{position:relative}.composer.floating{position:absolute}
+#recBar{position:absolute;inset:0;z-index:4;display:flex;align-items:center;gap:10px;padding:0 64px 0 16px;border-radius:inherit;background:inherit;font-size:15px;color:inherit;pointer-events:none}
+[dir=rtl] #recBar{padding:0 16px 0 64px}
+#recBar .rd{width:10px;height:10px;border-radius:50%;background:#E5202E;animation:recBl 1s infinite}
+#recBar .tm{font-variant-numeric:tabular-nums;min-width:38px}#recBar .hint{flex:1;text-align:center;opacity:.6;transition:transform .05s}
+#recBar.locked{pointer-events:auto}#recBar.locked .hint{display:none}
+#recBar .rb{display:none;border:0;background:none;color:inherit;font-size:15px;padding:8px;cursor:pointer;width:40px;height:40px}#recBar .rb svg{width:22px;height:22px}#recBar .rb.del{margin-inline-start:auto;margin-inline-end:52px}#recBar.locked .rb{display:block}
+#recBar .rb.go{position:absolute;right:6px;width:44px;height:44px;border-radius:50%;background:#E5202E;color:#fff;display:none}[dir=rtl] #recBar .rb.go{right:auto;left:6px}#recBar.locked .rb.go{display:grid;place-items:center}
+#recLock{position:absolute;z-index:5;bottom:64px;width:40px;height:76px;border-radius:20px;background:rgba(255,255,255,.9);color:#111;box-shadow:0 6px 20px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:space-around;font-size:16px;transition:transform .05s}
+#recLock .ar{font-size:12px;opacity:.6;animation:recUp 1.2s infinite}
+#micBtn.recording{position:relative;z-index:6;transform:scale(1.5);background:#E5202E!important;color:#fff!important;border-radius:50%}
+@keyframes recBl{50%{opacity:.2}}@keyframes recUp{0%{transform:translateY(6px);opacity:0}50%{opacity:1}100%{transform:translateY(-6px);opacity:0}}`;document.head.appendChild(css);})();
+(function(){const mic=$('#micBtn');mic.onclick=null;
+ let R=null;/* {rec,st,chunks,fake,start,timer,x0,y0,locked,done} */
+ const rtl=()=>document.documentElement.dir==='rtl';
+ const fmtD=s=>'0:'+String(Math.min(59,s)).padStart(2,'0');
+ function ui(){const comp=mic.closest('.composer');comp.insertAdjacentHTML('beforeend',`<div id="recBar"><span class="rd"></span><span class="tm">0:00</span><span class="hint">‹ ${t('Slide to cancel')}</span><button class="rb del" type="button">${SV(ICONS.trash||'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>')}</button><button class="rb go" type="button">${SV('<path d="M4 12l16-8-6 16-2.5-6.5z"/>')}</button></div>`);
+   const r=mic.getBoundingClientRect(),c=comp.getBoundingClientRect();comp.insertAdjacentHTML('beforeend',`<div id="recLock" style="left:${r.left-c.left+r.width/2-20}px">🔓<span class="ar">▲</span></div>`);
+   const bg=getComputedStyle(comp).backgroundColor.match(/[\d.]+/g)||[255,255,255];const lum=(+bg[0]+ +bg[1]+ +bg[2])/3;const bar=$('#recBar');bar.style.background=lum>128?'#F4F4F6':'#1C1C1E';bar.style.color=lum>128?'#111114':'#fff';
+   $('#recBar .del').onclick=()=>finish(false);$('#recBar .go').onclick=()=>finish(true);}
+ function clearUi(){$('#recBar')?.remove();$('#recLock')?.remove();mic.classList.remove('recording');}
+ async function begin(e){if(R)return;R={start:Date.now(),x0:e.clientX,y0:e.clientY,locked:false,done:false,chunks:[]};ui();mic.classList.add('recording');try{navigator.vibrate&&navigator.vibrate(20);}catch(_){}
+   R.timer=setInterval(()=>{if(!R)return;const s=Math.floor((Date.now()-R.start)/1000);const tm=$('#recBar .tm');if(tm)tm.textContent=fmtD(s);if(s>=59)finish(true);},250);
+   const cur=R;try{if(!navigator.mediaDevices||!window.MediaRecorder)throw 0;const st=await navigator.mediaDevices.getUserMedia({audio:true});
+     if(R!==cur||cur.done){st.getTracks().forEach(x=>x.stop());return;}
+     cur.st=st;cur.rec=new MediaRecorder(st);cur.rec.ondataavailable=ev=>cur.chunks.push(ev.data);cur.rec.start();}catch(_){cur.fake=true;}}
+ function finish(send){if(!R||R.done)return;const cur=R;cur.done=true;R=null;clearInterval(cur.timer);clearUi();
+   const dur=Math.max(1,Math.round((Date.now()-cur.start)/1000));
+   if(send&&Date.now()-cur.start<700){send=false;toast('🎙️ '+t('Hold to record'));}
+   const room=roomId;
+   if(cur.rec&&cur.rec.state==='recording'){cur.rec.onstop=()=>{cur.st.getTracks().forEach(x=>x.stop());if(!send)return;const fr=new FileReader();fr.onload=()=>pushMsg(room,{f:'me',a:fr.result,dur:fmtD(dur)});fr.readAsDataURL(new Blob(cur.chunks,{type:cur.rec.mimeType}));};cur.rec.stop();}
+   else{if(cur.st)cur.st.getTracks().forEach(x=>x.stop());if(send)pushMsg(room,{f:'me',voice:1,dur:fmtD(dur)});}}
+ mic.addEventListener('pointerdown',e=>{e.preventDefault();try{mic.setPointerCapture(e.pointerId);}catch(_){}begin(e);});
+ mic.addEventListener('pointermove',e=>{if(!R||R.locked)return;const dx=(e.clientX-R.x0)*(rtl()?-1:1),dy=e.clientY-R.y0;
+   const h=$('#recBar .hint'),lk=$('#recLock');if(h)h.style.transform=`translateX(${Math.min(0,dx)*(rtl()?-1:1)}px)`;if(lk)lk.style.transform=`translateY(${Math.min(0,dy)}px)`;
+   if(dx<-110){finish(false);return;}
+   if(dy<-70){R.locked=true;$('#recBar').classList.add('locked');$('#recLock')?.remove();mic.classList.remove('recording');try{navigator.vibrate&&navigator.vibrate(15);}catch(_){}}});
+ const up=()=>{if(R&&!R.locked)finish(true);};mic.addEventListener('pointerup',up);mic.addEventListener('pointercancel',()=>{if(R&&!R.locked)finish(false);});
+ mic.addEventListener('contextmenu',e=>e.preventDefault());
+ const _close=closeRoom;closeRoom=function(){if(R)finish(false);return _close.apply(this,arguments);};})();
