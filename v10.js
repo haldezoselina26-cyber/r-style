@@ -13,6 +13,7 @@ const REAL=/github\.io$/.test(location.hostname);
  'Not sent. Check your internet.':['Pas envoyé. Vérifie ta connexion.','לא נשלח. תבדוק את האינטרנט.','لم يُرسل. تحقق من الإنترنت.'],
  'Welcome back {u}!':['Re-bonjour {u} !','ברוך שובך {u}!','مرحبًا بعودتك {u}!'],
  'Could not send the link. Wait a minute and try again.':['Impossible d\'envoyer le lien. Attends une minute et réessaie.','לא הצלחנו לשלוח קישור. חכה דקה ונסה שוב.','تعذر إرسال الرابط. انتظر دقيقة وحاول مجددًا.'],
+ 'Too many e-mails were sent. Try again in 1 hour.':['Trop d\'e-mails envoyés. Réessaie dans 1 heure.','נשלחו יותר מדי מיילים. נסה שוב בעוד שעה.','تم إرسال رسائل كثيرة. حاول بعد ساعة.'],
  'New link sent':['Nouveau lien envoyé','נשלח קישור חדש','تم إرسال رابط جديد'],
  'We sent a link to {e}. Open it on this phone.':['On a envoyé un lien à {e}. Ouvre-le sur ce téléphone.','שלחנו קישור ל-{e}. תפתח אותו בטלפון הזה.','أرسلنا رابطًا إلى {e}. افتحه على هذا الهاتف.'],
  'Check your mailbox (and spam). It can take 1 minute.':['Regarde tes mails (et les spams). Ça peut prendre 1 minute.','תבדוק את המייל (וגם בספאם). זה יכול לקחת דקה.','تحقق من بريدك (والرسائل غير المرغوبة). قد يستغرق دقيقة.'],
@@ -30,7 +31,7 @@ function bindRealSignup(){
     if(!validate())return;const btn=$('#suNext');
     if(step===0){btn.disabled=true;btn.textContent=t('Sending…');
       const {error}=await SB.auth.signInWithOtp({email:D.email,options:{shouldCreateUser:true,emailRedirectTo:location.origin+location.pathname}});
-      btn.disabled=false;if(error){$('#emailErr').textContent=t('Could not send the link. Wait a minute and try again.');renderStep();return;}
+      btn.disabled=false;if(error){const rl=/rate|limit|429/i.test((error.message||'')+(error.status||''));$('#emailErr').textContent=rl?t('Too many e-mails were sent. Try again in 1 hour.'):t('Could not send the link. Wait a minute and try again.')+' ('+(error.message||error.status||'')+')';renderStep();return;}
       try{localStorage.setItem('rstyle_pending_email',D.email);}catch(_){}
       step=1;renderStep();linkWait();return;}
     if(step===1){btn.disabled=true;
