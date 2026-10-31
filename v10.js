@@ -14,6 +14,8 @@ const REAL=/github\.io$/.test(location.hostname);
  'Welcome back {u}!':['Re-bonjour {u} !','ברוך שובך {u}!','مرحبًا بعودتك {u}!'],
  'Could not send the link. Wait a minute and try again.':['Impossible d\'envoyer le lien. Attends une minute et réessaie.','לא הצלחנו לשלוח קישור. חכה דקה ונסה שוב.','تعذر إرسال الرابط. انتظر دقيقة وحاول مجددًا.'],
  'Too many e-mails were sent. Try again in 1 hour.':['Trop d\'e-mails envoyés. Réessaie dans 1 heure.','נשלחו יותר מדי מיילים. נסה שוב בעוד שעה.','تم إرسال رسائل كثيرة. حاول بعد ساعة.'],
+ 'Allow the microphone to send a real voice message.':['Autorise le micro pour envoyer un vrai message vocal.','תאשר את המיקרופון כדי לשלוח הודעה קולית אמיתית.','اسمح للميكروفون بإرسال رسالة صوتية حقيقية.'],
+ 'For now, only text, photos and voice with real friends.':['Pour l\'instant : texte, photos et vocaux avec les vrais amis.','בינתיים: טקסט, תמונות והקלטות עם חברים אמיתיים.','حاليًا: نص وصور ورسائل صوتية مع الأصدقاء الحقيقيين.'],
  'New link sent':['Nouveau lien envoyé','נשלח קישור חדש','تم إرسال رابط جديد'],
  'We sent a link to {e}. Open it on this phone.':['On a envoyé un lien à {e}. Ouvre-le sur ce téléphone.','שלחנו קישור ל-{e}. תפתח אותו בטלפון הזה.','أرسلنا رابطًا إلى {e}. افتحه على هذا الهاتف.'],
  'Check your mailbox (and spam). It can take 1 minute.':['Regarde tes mails (et les spams). Ça peut prendre 1 minute.','תבדוק את המייל (וגם בספאם). זה יכול לקחת דקה.','تحقق من بريدك (والرسائل غير المرغوبة). قد يستغرق دقيقة.'],
@@ -69,16 +71,21 @@ async function afterLogin(){if(!ME_ID)return;
 async function syncMessages(){const {data}=await SB.from('messages').select('*').or(`sender.eq.${ME_ID},receiver.eq.${ME_ID}`).order('created_at',{ascending:true}).limit(1000);
   const by={};(data||[]).forEach(m=>{const other=m.sender===ME_ID?m.receiver:m.sender;const id=rid(other);(by[id]=by[id]||[]).push(toLocal(m));});
   Object.keys(S.chats).forEach(k=>{if(k.startsWith('r_'))delete S.chats[k];});Object.assign(S.chats,by);
+  try{await signAll(Object.values(by).flat());}catch(_){}
   const unknown=Object.keys(by).filter(id=>!USERS[id]).map(uuidOf);if(unknown.length){const {data:ps}=await SB.from('profiles').select('*').in('id',unknown);(ps||[]).forEach(addReal);}}
-function toLocal(m){const mine=m.sender===ME_ID;return {f:mine?'me':'them',t:m.body,ts:Date.parse(m.created_at),dbid:m.id,st:mine?(m.read_at?'read':'delivered'):undefined,read:!mine&&!!m.read_at};}
+function toLocal(m){const mine=m.sender===ME_ID;const x={f:mine?'me':'them',ts:Date.parse(m.created_at),dbid:m.id,st:mine?(m.read_at?'read':'delivered'):undefined,read:!mine&&!!m.read_at};
+  const k=m.kind||'text';if(k==='text')x.t=m.body;else if(k==='voice'){x.voice=1;x.dur=m.body||'0:05';x.media=m.media;}else{x.media=m.media;x.once=k==='once';x.filter=x.once?null:m.body;x.img=x.once&&!m.media?'':(x.img||'');if(x.once&&!m.media)x.opened=true;}return x;}
+async function signAll(list){const need=list.filter(x=>x.media&&!x.url);if(!need.length)return;
+  const {data}=await SB.storage.from('chat').createSignedUrls(need.map(x=>x.media),3600*6);(data||[]).forEach((d,i)=>{const x=need[i];if(d&&d.signedUrl){x.url=d.signedUrl;if(x.voice)x.a=d.signedUrl;else x.img=d.signedUrl;}});}
 function listen(){if(SBchan)SB.removeChannel(SBchan);
   SBchan=SB.channel('msgs-'+ME_ID)
    .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`receiver=eq.${ME_ID}`},async p=>{const m=p.new;const id=rid(m.sender);
       if(!USERS[id]){const {data}=await SB.from('profiles').select('*').eq('id',m.sender).maybeSingle();if(data)addReal(data);}
       const a=S.chats[id]=S.chats[id]||[];if(a.some(x=>x.dbid===m.id))return;const here=current==='room'&&roomId===id;
-      a.push(Object.assign(toLocal(m),{read:here}));save();if(here){renderMsgs();markReadReal(id);}else if(current==='chat')renderChatList();
+      const loc=Object.assign(toLocal(m),{read:here});try{await signAll([loc]);}catch(_){}a.push(loc);save();if(here){renderMsgs();markReadReal(id);}else if(current==='chat')renderChatList();
       if(navigator.vibrate)try{navigator.vibrate(15);}catch(_){}})
    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'messages',filter:`sender=eq.${ME_ID}`},p=>{const m=p.new;const a=S.chats[rid(m.receiver)]||[];const x=a.find(y=>y.dbid===m.id);
+      if(x&&(m.kind==='once')&&!m.media){x.opened=true;}
       if(x&&m.read_at){x.st='read';save();if(current==='room'&&roomId===rid(m.receiver))renderMsgs();}})
    .subscribe();}
 async function markReadReal(id){const u=uuidOf(id);if(!u)return;await SB.from('messages').update({read_at:new Date().toISOString()}).eq('sender',u).eq('receiver',ME_ID).is('read_at',null);}
@@ -86,13 +93,20 @@ async function markReadReal(id){const u=uuidOf(id);if(!u)return;await SB.from('m
 /* ---------- sending to a real friend ---------- */
 function hookPush(){const _push=pushMsg;
   pushMsg=function(id,m){const u=uuidOf(id);if(!u)return _push(id,m);
-    if(!m.t){toast(t('For now, only text messages with real friends.'));return;}
+    if(!m.t&&!m.img&&!m.a){toast(m.voice?t('Allow the microphone to send a real voice message.'):t('For now, only text, photos and voice with real friends.'));return;}
     m.ts=Date.now();m.st='sent';(S.chats[id]=S.chats[id]||[]).push(m);bumpStreak(id);save();
     if(current==='room'&&roomId===id){renderMsgs();flyLast();burstSend();pop();}
-    SB.from('messages').insert({receiver:u,body:m.t}).select().single().then(({data,error})=>{
+    (async()=>{let row={receiver:u,body:m.t,kind:'text'};
+      if(m.img||m.a){const blob=dataUrlToBlob(m.img||m.a);const ext=m.a?((blob.type.includes('mp4')||blob.type.includes('aac'))?'m4a':'webm'):'jpg';const path=`${ME_ID}/${u}/${Date.now()}.${ext}`;
+        const up=await SB.storage.from('chat').upload(path,blob,{contentType:blob.type||'application/octet-stream'});if(up.error)return {error:up.error};
+        m.media=path;row=m.a?{receiver:u,kind:'voice',media:path,body:m.dur||null}:{receiver:u,kind:m.once?'once':'image',media:path,body:m.filter||null};}
+      return SB.from('messages').insert(row).select().single();})().then(({data,error})=>{
       if(error){m.st='sent';m.failed=true;toast(error.code==='42501'?t('You can only write to friends who follow you back.'):t('Not sent. Check your internet.'));}
       else{m.dbid=data.id;m.st='delivered';}save();if(current==='room'&&roomId===id)renderMsgs();});};
-  const _open=openRoom;openRoom=function(id){_open(id);if(uuidOf(id))markReadReal(id);};}
+  const _open=openRoom;openRoom=function(id){_open(id);if(uuidOf(id))markReadReal(id);};
+  const _once=openOnce;openOnce=function(k){const id=roomId;const m=(S.chats[id]||[])[k];_once(k);
+    if(uuidOf(id)&&m&&m.f!=='me'&&m.once&&m.media&&m.dbid){const path=m.media;const done=()=>{SB.storage.from('chat').remove([path]).then(()=>SB.from('messages').update({media:null,read_at:new Date().toISOString()}).eq('id',m.dbid));m.media=null;m.img='';save();};
+      const v=document.querySelector('.onceView');if(v){const c=v.onclick;v.onclick=()=>{c&&c();done();};}else done();}};}
 
 /* ---------- follow / unfollow real people ---------- */
 function hookFollow(){const _tf=toggleFollow;
