@@ -139,3 +139,79 @@ function hookLogout(){document.addEventListener('click',e=>{if(e.target.closest(
   else if(S.profile&&!S.profile.uid){/* account made before the server: sign in again with a real code */S.profile=null;save();applyTheme();show('splash');}
   SB.auth.onAuthStateChange((ev,s)=>{if(ev==='SIGNED_OUT'){ME_ID=null;}});
 })();
+
+/* ====================== v11: real Shorts, likes, comments, reports ====================== */
+let REALPOSTS=[],postsAt=0,postsBusy=false;
+(function(){const T={'Report this post':['Signaler ce post','דווח על הפוסט','الإبلاغ عن المنشور'],'Delete my post':['Supprimer mon post','מחק את הפוסט שלי','حذف منشوري'],
+ 'Post deleted':['Post supprimé','הפוסט נמחק','تم حذف المنشور'],'Thanks, our team will check it.':['Merci, notre équipe va vérifier.','תודה, הצוות שלנו יבדוק.','شكرًا، سيتحقق فريقنا.'],
+ 'Uploading…':['Envoi…','מעלה…','جارٍ الرفع…'],'This video is too big (max 50 MB).':['Cette vidéo est trop lourde (max 50 Mo).','הסרטון גדול מדי (עד 50MB).','الفيديو كبير جدًا (حد أقصى 50 ميغابايت).'],
+ 'Sign in to publish.':['Connecte-toi pour publier.','תתחבר כדי לפרסם.','سجّل الدخول للنشر.'],'Delete':['Supprimer','מחק','حذف']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
+async function loadPosts(force){if(!SB||!ME_ID||postsBusy)return;if(!force&&Date.now()-postsAt<30000)return;postsBusy=true;
+  try{const {data:posts}=await SB.from('posts').select('*').order('created_at',{ascending:false}).limit(60);
+    const ids=[...new Set((posts||[]).map(p=>p.author))];if(ids.length){const {data:ps}=await SB.from('profiles').select('*').in('id',ids);(ps||[]).forEach(p=>{if(p.id!==ME_ID)addReal(p);});}
+    const pids=(posts||[]).map(p=>p.id);const {data:lk}=pids.length?await SB.from('likes').select('post,liker').in('post',pids):{data:[]};
+    const {data:cm}=pids.length?await SB.from('comments').select('post').in('post',pids):{data:[]};
+    const {data:urls}=(posts||[]).length?await SB.storage.from('posts').createSignedUrls(posts.map(p=>p.media),3600*6):{data:[]};
+    REALPOSTS=(posts||[]).map((p,i)=>{const url=(urls||[])[i]?.signedUrl||'';const mine=p.author===ME_ID;const likes=(lk||[]).filter(x=>x.post===p.id);
+      const iLike=likes.some(x=>x.liker===ME_ID);const id='db'+p.id;S.likes[id]=iLike;
+      return {id,dbid:p.id,author:p.author,u:mine?null:rid(p.author),mine,by:mine?me().username:undefined,img:p.kind==='video'?null:url,video:p.kind==='video'?url:null,cap:p.caption||'',likes:likes.length-(iLike?1:0),score:null,tags:[],ts:Date.parse(p.created_at),ncom:(cm||[]).filter(x=>x.post===p.id).length,real:true};});
+    postsAt=Date.now();}catch(e){}postsBusy=false;}
+/* feed = real posts first, then the examples */
+const _feedList11=feedList;
+feedList=function(){const base=_feedList11();if(!REALPOSTS.length)return base;const real=REALPOSTS.filter(p=>!(p.u&&S.blocked[p.u])&&(feedMode==='foryou'||p.mine||(p.u&&S.following[p.u])));return [...real,...base.filter(p=>!(p.mine&&p.dbid))];};
+const _findPost11=findPost;findPost=function(id){return REALPOSTS.find(x=>x.id===id)||_findPost11(id);};
+const _subVideos=subVideos;
+subVideos=function(){const fol=REALPOSTS.filter(p=>p.u&&S.following[p.u]&&!S.blocked[p.u]&&(!subSel||p.u===subSel));return [...fol,..._subVideos()].sort((a,b)=>(b.ts||0)-(a.ts||0));};
+const _renderFeed11=renderFeed;
+renderFeed=function(){_renderFeed11();
+  $$('#feed .vcell').forEach(c=>{const p=subList[+c.dataset.vi];if(p&&p.real){c.style.background=`#222 url(${p.img||''}) center/cover`;c.querySelector('.vl').innerHTML=p.video?SV(ICONS.play):'';}});
+  $$('#feed .short').forEach(el=>{const p=REALPOSTS.find(x=>x.id===el.dataset.id);if(!p)return;const rail=el.querySelector('.rail');if(!rail||rail.querySelector('[data-pmore]'))return;
+    const cb=rail.querySelector('[data-comments] span');if(cb&&p.ncom)cb.textContent=fmt(p.ncom);
+    rail.insertAdjacentHTML('beforeend',`<button data-pmore="${p.id}" aria-label="More">${SV(p.mine?ICONS.trash:ICONS.flag)}<span>${p.mine?t('Delete'):t('Report')}</span></button>`);});
+  if(REAL&&ME_ID&&Date.now()-postsAt>30000)loadPosts().then(()=>{if(current==='shorts')_rerender();});};
+function _rerender(){const sc=$('#feed').scrollTop;renderFeed();$('#feed').scrollTop=sc;}
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-pmore]');if(!b)return;e.stopPropagation();const p=REALPOSTS.find(x=>x.id===b.dataset.pmore);if(!p)return;
+  if(p.mine){openSheet(`<h3>${t('Delete my post')}</h3><button class="btn danger" id="pdY" style="margin-top:12px">${t('Delete')}</button><button class="btn" id="pdN" style="margin-top:6px">${t('Cancel')}</button>`);
+    $('#pdN').onclick=closeSheet;$('#pdY').onclick=async()=>{closeSheet();const {data:row}=await SB.from('posts').select('media').eq('id',p.dbid).maybeSingle();await SB.from('posts').delete().eq('id',p.dbid);if(row)await SB.storage.from('posts').remove([row.media]);
+      REALPOSTS=REALPOSTS.filter(x=>x!==p);S.posts=S.posts.filter(x=>x.dbid!==p.dbid);save();_rerender();toast(t('Post deleted'));};}
+  else{openSheet(`<h3>${t('Report this post')}</h3>${['Not about style','Inappropriate','Bullying','Spam'].map(r=>`<button class="srow" data-rr="${r}"><div class="l"><b>${t(r)}</b></div></button>`).join('')}`);
+    $('#sheet').querySelectorAll('[data-rr]').forEach(x=>x.onclick=async()=>{closeSheet();await SB.from('reports').insert({target_type:'post',target_id:String(p.dbid),reason:x.dataset.rr});REALPOSTS=REALPOSTS.filter(y=>y!==p);_rerender();toast(t('Thanks, our team will check it.'));});}},true);
+/* likes */
+document.addEventListener('click',e=>{const b=e.target.closest('[data-like]');if(!b||!SB||!ME_ID)return;const id=b.dataset.like;const p=REALPOSTS.find(x=>x.id===id);if(!p)return;
+  setTimeout(()=>{if(S.likes[id])SB.from('likes').insert({post:p.dbid}).then(()=>{});else SB.from('likes').delete().eq('post',p.dbid).eq('liker',ME_ID).then(()=>{});},0);},true);
+const _dblLike=dblLike;dblLike=function(sl,x,y){const id=sl.dataset.id;const was=!!S.likes[id];_dblLike(sl,x,y);const p=REALPOSTS.find(q=>q.id===id);if(p&&!was&&SB)SB.from('likes').insert({post:p.dbid}).then(()=>{});};
+/* publish for real */
+const _publish=publish;
+publish=async function(media,cap){if(!(REAL&&SB))return _publish(media,cap);if(!ME_ID){toast(t('Sign in to publish.'));return;}
+  const v=$('#pVerdict');$('#pGo').disabled=true;
+  if(AI&&AI_IMG){try{const r=await AI.json(`You moderate posts for a fashion app for teenagers. Image + caption "${cap.replace(/"/g,"'")}". Return JSON only: {"style_related":true,"safe":true,"reason":""}`,{images:[dataUrlToBlob(media.img)]});
+    if(!r.style_related||!r.safe){v.innerHTML=`<div class="verdict bad"><span></span><span><b>${t('Not published')}</b><br>${esc(r.reason||'')}</span></div>`;$('#pGo').disabled=false;return;}}catch(_){}}
+  v.innerHTML=`<div class="why"><span class="spin"></span><span>${t('Uploading…')}</span></div>`;
+  try{let blob,kind='image',ext='jpg';if(media.video){blob=await (await fetch(media.video)).blob();kind='video';ext=(blob.type.includes('quicktime')?'mov':'mp4');if(blob.size>50*1024*1024){v.innerHTML=`<div class="verdict bad"><span></span><span>${t('This video is too big (max 50 MB).')}</span></div>`;$('#pGo').disabled=false;return;}}else blob=dataUrlToBlob(media.img);
+    const path=`${ME_ID}/${Date.now()}.${ext}`;const up=await SB.storage.from('posts').upload(path,blob,{contentType:blob.type||(kind==='video'?'video/mp4':'image/jpeg')});if(up.error)throw up.error;
+    const {data,error}=await SB.from('posts').insert({media:path,kind,caption:cap.slice(0,300)}).select().single();if(error)throw error;
+    S.posts.unshift({id:'db'+data.id,dbid:data.id,by:me().username,img:media.img,video:media.video||null,cap,likes:0,ts:Date.now()});save();
+    if(challengeMode){S.challenge.joined=true;save();}challengeMode=false;contestMode=false;
+    v.innerHTML=`<div class="verdict good"><span></span><span><b>${t('Published!')}</b></span></div>`;await loadPosts(true);setTimeout(()=>{closeSheet();feedMode='foryou';show('shorts');},700);
+  }catch(e){v.innerHTML=`<div class="verdict bad"><span></span><span>${t('Not sent. Check your internet.')}</span></div>`;$('#pGo').disabled=false;}};
+/* comments for real posts */
+const _openComments=openComments;
+openComments=function(id){const p=REALPOSTS.find(x=>x.id===id);if(!p||!SB)return _openComments(id);
+  openSheet(`<h3>${t('Comments')}</h3><p class="muted" style="margin:0;font-size:13px">${t('Be kind ✨ Ruby removes hurtful comments.')}</p>
+    <div class="cmtList" id="cmtList"><div class="muted" style="padding:16px 0"><span class="spin"></span></div></div>
+    <form class="cmtBar" id="cmtForm"><input id="cmtIn" maxlength="300" placeholder="${t('Add a comment…')}" autocomplete="off"><button class="cb send" aria-label="Post">${SV('<path d="M4 12l16-8-6 16-2.5-6.5z"/>')}</button></form>`);
+  const load=async()=>{const {data}=await SB.from('comments').select('*').eq('post',p.dbid).order('created_at',{ascending:true}).limit(300);
+    const ids=[...new Set((data||[]).map(c=>c.author))];const names={};if(ids.length){const {data:ps}=await SB.from('profiles').select('id,username,color').in('id',ids);(ps||[]).forEach(x=>names[x.id]=x);}
+    const box=$('#cmtList');if(!box)return;const list=(data||[]).filter(c=>!S.hiddenComments['c'+c.id]&&!S.blocked[rid(c.author)]);p.ncom=list.length;
+    box.innerHTML=list.length?list.map(c=>{const n=names[c.author]||{username:'?',color:'#555'};const mine=c.author===ME_ID;return `<div class="cmt"><span class="av" style="background:${n.color||'#555'}">${initials(n.username)}</span><div class="tx"><b>@${esc(n.username)}</b>${esc(c.body)}</div><button class="rep" data-cact="${c.id}" data-mine="${mine?1:''}">${mine?t('Delete'):t('Report')}</button></div>`;}).join('')
+      :`<div class="muted" style="padding:18px 0;text-align:center">${t('No comments yet. Be the first! 🎉')}</div>`;box.scrollTop=box.scrollHeight;};
+  load();
+  $('#cmtList').onclick=async e=>{const b=e.target.closest('[data-cact]');if(!b)return;const cid=+b.dataset.cact;
+    if(b.dataset.mine){await SB.from('comments').delete().eq('id',cid);}else{await SB.from('reports').insert({target_type:'comment',target_id:String(cid),reason:'comment'});S.hiddenComments['c'+cid]=true;save();toast(t('Thanks, comment reported and hidden'));}load();};
+  $('#cmtForm').onsubmit=async e=>{e.preventDefault();const inp=$('#cmtIn');const text=inp.value.trim();if(!text)return;inp.disabled=true;
+    if(AI){try{const r=await AI.json(`Is this comment on a fashion app for teenagers insulting, harassing, sexual, hateful or bullying? Comment: "${text.replace(/"/g,"'")}". Return JSON only: {"ok":true|false}`,{modelTier:'quick'});if(r&&r.ok===false){inp.disabled=false;toast(t('Ruby blocked this comment — please be kind.'));return;}}catch(_){}}
+    const {error}=await SB.from('comments').insert({post:p.dbid,body:text.slice(0,300)});inp.disabled=false;if(error){toast(t('Not sent. Check your internet.'));return;}inp.value='';load();};};
+/* private account → server */
+const _renderSettings11=renderSettings;renderSettings=function(){_renderSettings11();const tg=$('#tgPriv');if(tg&&SB&&ME_ID){const old=tg.onclick;tg.onclick=()=>{old();SB.from('profiles').update({private:!!S.profile.private}).eq('id',ME_ID).then(()=>{});};}};
+/* load posts after login */
+(function(){const _after=afterLogin;afterLogin=async function(){await _after();await loadPosts(true);if(current==='shorts')_rerender();};})();
