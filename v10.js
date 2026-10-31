@@ -245,3 +245,14 @@ $('#msgInput').addEventListener('input',()=>{if(!TYch)return;const has=!!$('#msg
 $('#composer').addEventListener('submit',()=>{TYsent=0;TYsend(false);});
 (function(){const _o=openRoom;openRoom=function(id){const r=_o.apply(this,arguments);if(uuidOf(id))tyJoin(id);else tyLeave();return r;};
  const _c=closeRoom;closeRoom=function(){tyLeave();return _c.apply(this,arguments);};})();
+
+/* ====================== v14: Ruby + all AI features with Gemini (Supabase Edge Function "ruby") ====================== */
+function blobToDataUrl(b){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.onerror=()=>r(null);fr.readAsDataURL(b);});}
+async function gemCall(body){const {data,error}=await SB.functions.invoke('ruby',{body});if(error)throw error;if(!data||data.error){const e=new Error((data&&data.error)||'AI error');if(data&&data.status===429)e.code='rate_limited';throw e;}return data;}
+function makeGemini(){const G=async function(msgs,opts={}){const image=opts.images&&opts.images[0]?await blobToDataUrl(opts.images[0]):null;
+    const d=await gemCall({messages:(msgs||[]).map(m=>({role:m.role,content:typeof m.content==='string'?m.content:JSON.stringify(m.content)})),image});const text=d.text||'';if(opts.onText)try{opts.onText({text});}catch(_){}return {text};};
+  G.json=async(prompt,opts={})=>{const image=opts.images&&opts.images[0]?await blobToDataUrl(opts.images[0]):null;const d=await gemCall({messages:[{role:'user',content:prompt}],image,json:true});
+    const s=String(d.text||'').trim().replace(/^```(json)?/i,'').replace(/```$/,'').trim();try{return JSON.parse(s);}catch(_){const m=s.match(/\{[\s\S]*\}/);if(m)return JSON.parse(m[0]);throw new Error('Bad AI answer');}};
+  G.limits=async()=>({images:true});G.gemini=true;return G;}
+function enableGemini(){if(!REAL||!SB||!ME_ID||(AI&&AI.gemini))return;AI=makeGemini();AI_IMG=true;}
+(function(){const _after=afterLogin;afterLogin=async function(){await _after();enableGemini();};})();
