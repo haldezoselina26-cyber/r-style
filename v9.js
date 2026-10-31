@@ -1017,3 +1017,24 @@ $('#roomBack').onclick=()=>closeRoom();
  const upd=()=>{const kb=Math.max(0,window.innerHeight-vv.height-vv.offsetTop);const room=$('#room');const open=kb>80;room.style.setProperty('--kb',(open?kb:0)+'px');room.classList.toggle('kbOpen',open);
    if(open){window.scrollTo(0,0);const b=$('#msgs');if(b)b.scrollTop=b.scrollHeight;}};
  vv.addEventListener('resize',upd);vv.addEventListener('scroll',upd);$('#msgInput').addEventListener('focus',()=>setTimeout(upd,300));$('#msgInput').addEventListener('blur',()=>setTimeout(upd,300));})();
+
+/* v10.9 camera like Snapchat: tap = photo, hold = video, small gallery button next to the shutter */
+(function(){const T={'Tap for photo · hold for video':['Appuie : photo · Maintiens : vidéo','לחיצה: תמונה · החזקה: וידאו','اضغط: صورة · اضغط مطولًا: فيديو'],'Allow the camera in Settings':['Autorise la caméra dans les Réglages','אפשר גישה למצלמה בהגדרות','اسمح بالوصول إلى الكاميرا من الإعدادات']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});
+ const css=document.createElement('style');css.textContent=`#snap .sgal{position:absolute;left:22px;bottom:calc(env(safe-area-inset-bottom) + 28px);width:44px;height:44px;border-radius:14px;border:2px solid #fff;background:rgba(0,0,0,.3) center/cover;z-index:5;display:grid;place-items:center;color:#fff}
+#snap .sgal svg{width:22px;height:22px}#snap .shint{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 44px);text-align:center;color:#fff;font-size:12px;font-weight:600;opacity:.85;z-index:5;text-shadow:0 1px 4px rgba(0,0,0,.4)}
+#snap .shut.holding{transform:translateX(-50%) scale(1.15);transition:transform .2s}`;document.head.appendChild(css);})();
+function snapPhoto(){const v=$('#snapV');if(!v||!v.videoWidth)return false;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;const x=c.getContext('2d');x.translate(c.width,0);x.scale(-1,1);x.drawImage(v,0,0);
+  SNAP.img=c.toDataURL('image/jpeg',.88);if(SNAP.stream){SNAP.stream.getTracks().forEach(z=>z.stop());SNAP.stream=null;}renderSnap();return true;}
+async function snapEnsureCam(){if(SNAP.stream)return true;try{SNAP.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});renderSnap();return true;}catch(_){toast(t('Allow the camera in Settings'));return false;}}
+const _renderSnap109=renderSnap;renderSnap=function(){_renderSnap109();const s=$('#snap');if(SNAP.img||SNAP.vid)return;
+  s.querySelector('.smodes')?.remove();const fn=s.querySelector('.fname');if(fn&&fn.textContent===t('Tap to record · max 60 s'))fn.textContent=fName(filterById(SNAP.filter));
+  s.insertAdjacentHTML('beforeend',`<button class="sgal" id="snapGal2" aria-label="${t('Gallery')}">${SV('<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>')}</button><div class="shint">${t('Tap for photo · hold for video')}</div>`);
+  $('#snapGal2').onclick=async()=>{const fl=await pickFile('image/*,video/*');if(!fl)return;
+    if(fl.type.startsWith('video')){const url=URL.createObjectURL(fl);const fr=await videoFrame(url);if(fr&&fr.dur>61){toast(t('Video is too long (max 60 s)'));return;}if(fl.size>50*1024*1024){toast(t('This video is too big (max 50 MB).'));return;}
+      if(SNAP.stream){SNAP.stream.getTracks().forEach(z=>z.stop());SNAP.stream=null;}SNAP.vidBlob=fl;SNAP.vid=url;SNAP.vidDur=fr?fmtSec(fr.dur):'';renderSnap();return;}
+    SNAP.img=await downscale(await readFile(fl),1000,.85);if(SNAP.stream){SNAP.stream.getTracks().forEach(z=>z.stop());SNAP.stream=null;}renderSnap();};
+  const sh=$('#snapShut');if(!sh)return;sh.onclick=null;sh.classList.remove('vid');sh.style.touchAction='none';let hold=null,held=false;
+  sh.onpointerdown=async e=>{e.preventDefault();try{sh.setPointerCapture(e.pointerId);}catch(_){}held=false;if(!SNAP.stream){await snapEnsureCam();return;}
+    hold=setTimeout(()=>{held=true;sh.classList.add('vid','holding');startVidRec();},350);};
+  sh.onpointerup=()=>{clearTimeout(hold);sh.classList.remove('holding');if(held){stopVidRec();held=false;return;}if(SNAP.stream)snapPhoto();};
+  sh.onpointercancel=()=>{clearTimeout(hold);if(held){stopVidRec();held=false;}};sh.oncontextmenu=e=>e.preventDefault();};
