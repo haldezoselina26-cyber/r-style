@@ -805,3 +805,19 @@ playVoice=function(k,btn){const m=S.chats[roomId][k];
   stopVoice();let audio=null;if(m.a){try{audio=new Audio(m.a);audio.play().catch(()=>{});}catch(_){audio=null;}}
   const v=btn.closest('.vmsg');VP={k,room:roomId,el:v,audio,dur:secOf(m.dur),pos:0,t0:performance.now(),paused:false,label:v.querySelector('small').textContent};vpTick();};
 (function(){const _c=closeRoom;closeRoom=function(){stopVoice();return _c.apply(this,arguments);};})();
+
+/* v10.4 simple birthday: day / month / year menus instead of the calendar */
+(function(){const T={'Day':['Jour','יום','اليوم'],'Month':['Mois','חודש','الشهر'],'Year':['Année','שנה','السنة']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});
+ const css=document.createElement('style');css.textContent=`.bdSel{display:flex;gap:8px}.bdSel select{flex:1;min-width:0;height:54px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--fg);font-size:17px;padding:0 10px;-webkit-appearance:none;appearance:none;text-align:center;text-align-last:center}.bdSel select.m{flex:1.6}`;document.head.appendChild(css);
+ const inp=$('#suAge');inp.type='hidden';
+ const wrap=document.createElement('div');wrap.className='bdSel';inp.after(wrap);
+ function build(){const loc={fr:'fr-FR',he:'he-IL',ar:'ar'}[S.lang]||'en-US';const y0=new Date().getFullYear();const cur=(inp.value||'').split('-');
+   const mon=Array.from({length:12},(_,i)=>new Intl.DateTimeFormat(loc,{month:'long'}).format(new Date(2000,i,1)));
+   wrap.innerHTML=`<select class="d" aria-label="${t('Day')}"><option value="">${t('Day')}</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('')}</select>
+   <select class="m" aria-label="${t('Month')}"><option value="">${t('Month')}</option>${mon.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('')}</select>
+   <select class="y" aria-label="${t('Year')}"><option value="">${t('Year')}</option>${Array.from({length:88},(_,i)=>y0-12-i).map(y=>`<option value="${y}">${y}</option>`).join('')}</select>`;
+   if(cur.length===3){wrap.querySelector('.y').value=+cur[0];wrap.querySelector('.m').value=+cur[1];wrap.querySelector('.d').value=+cur[2];}
+   wrap.onchange=()=>{const d=wrap.querySelector('.d').value,m=wrap.querySelector('.m').value,y=wrap.querySelector('.y').value;
+     if(d&&m&&y){const last=new Date(+y,+m,0).getDate();const dd=Math.min(+d,last);if(dd!==+d)wrap.querySelector('.d').value=dd;inp.value=`${y}-${String(m).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;}else inp.value='';
+     inp.dispatchEvent(new Event('input'));};}
+ build();const _rs=renderStep;renderStep=function(){const r=_rs.apply(this,arguments);build();return r;};})();
