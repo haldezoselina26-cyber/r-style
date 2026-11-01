@@ -503,3 +503,91 @@ async function pushText(u,text){try{await SB.functions.invoke(PUSH_FN,{body:{to:
 const _aiErr191=aiErr;aiErr=function(e){if(AI&&AI.gemini){const m=String((e&&(e.message||e.error))||e||'');
   if(/quota|429|rate|RESOURCE_EXHAUSTED/i.test(m))return t('Ruby is busy right now. Try again in a minute.');return t('Ruby could not answer. Please try again.')+' ('+m.slice(0,140)+')';}return _aiErr191(e);};
 const _gemCall191=gemCall;gemCall=async function(body){try{return await _gemCall191(body);}catch(e){let msg=e&&e.message||String(e);try{if(e&&e.context&&e.context.json){const j=await e.context.json();msg=(j&&(j.error||j.message))||msg;}}catch(_){}const er=new Error(msg);if(e&&e.code)er.code=e.code;throw er;}};
+
+/* ====================== v20: REAL stories between friends (24 h, Supabase) ====================== */
+let storiesAt=0,storiesBusy=false;
+async function pushStories(){if(!SB||!ME_ID)return;const day=Date.now()-86400000;
+  for(const x of S.myStory){if(x.sid||x.up||!x.img||(x.ts||0)<day)continue;x.up=1;
+    try{const path=`${ME_ID}/${x.ts||Date.now()}.jpg`;const up=await SB.storage.from('stories').upload(path,dataUrlToBlob(x.img),{contentType:'image/jpeg',upsert:true});if(up.error)throw up.error;
+      const {data,error}=await SB.from('stories').insert({media:path}).select().single();if(error)throw error;x.sid=data.id;}catch(_){}delete x.up;}
+  _save20();}
+async function loadStories(force){if(!SB||!ME_ID||storiesBusy)return;if(!force&&Date.now()-storiesAt<60000)return;storiesBusy=true;
+  try{const since=new Date(Date.now()-86400000).toISOString();const {data}=await SB.from('stories').select('*').gt('created_at',since).order('created_at',{ascending:true}).limit(200);
+    const rows=(data||[]).filter(r=>r.author!==ME_ID&&!S.blocked[rid(r.author)]);const {data:urls}=rows.length?await SB.storage.from('stories').createSignedUrls(rows.map(r=>r.media),3600*6):{data:[]};
+    Object.keys(STORIES).forEach(k=>{if(k.startsWith('r_'))delete STORIES[k];});
+    const unknown=[...new Set(rows.map(r=>r.author))].filter(a=>!USERS[rid(a)]);if(unknown.length){const {data:ps}=await SB.from('profiles').select('*').in('id',unknown);(ps||[]).forEach(addReal);}
+    rows.forEach((r,i)=>{const u=(urls||[])[i];if(!u||!u.signedUrl||!USERS[rid(r.author)])return;(STORIES[rid(r.author)]=STORIES[rid(r.author)]||[]).push({img:u.signedUrl,ts:Date.parse(r.created_at),sid:r.id});});
+    /* new story since last time = show the ring again */
+    Object.keys(STORIES).forEach(k=>{if(!k.startsWith('r_'))return;const last=STORIES[k][STORIES[k].length-1];if(S.seen[k]&&S.seenAt&&S.seenAt[k]&&last.ts>S.seenAt[k])delete S.seen[k];});
+    storiesAt=Date.now();if(current==='chat')renderStoryRow();}catch(_){}storiesBusy=false;}
+/* real story owners first, then the examples */
+const _storyOwners20=storyOwners;storyOwners=function(){const o=_storyOwners20();const real=o.filter(k=>k.startsWith('r_')),rest=o.filter(k=>!k.startsWith('r_'));return rest[0]==='me'?['me',...real,...rest.slice(1)]:[...real,...rest];};
+const _renderStoryRow20=renderStoryRow;renderStoryRow=function(){_renderStoryRow20();
+  $$('[data-story^="r_"]').forEach(b=>{const id=b.dataset.story;const inn=b.querySelector('.in');if(inn&&USERS[id]&&USERS[id].photo){inn.style.background=`#333 center/cover url(${USERS[id].photo})`;inn.textContent='';}});
+  const row=$('[data-story]')&&$('[data-story]').parentElement;if(row){const mine=row.querySelector('#myStoryBtn');[...row.querySelectorAll('[data-story^="r_"]')].reverse().forEach(b=>mine?mine.after(b):row.prepend(b));}};
+/* show the real photo in the story viewer */
+const _segs20=segs;segs=function(owner){if(String(owner).startsWith('r_'))return (STORIES[owner]||[]).map(x=>({img:x.img,real:true,ts:x.ts,g:0,e:'',cap:''}));return _segs20(owner);};
+const _loadSeg20=loadSeg;loadSeg=function(){_loadSeg20();const owner=ST.owners[ST.o];if(!String(owner).startsWith('r_'))return;const seg=(STORIES[owner]||[])[ST.s];if(!seg)return;
+  const b=$('#stBody');b.style.cssText=`background:#000 url(${seg.img}) center/contain no-repeat`;b.textContent='';$('#stCap').textContent='';S.seenAt=S.seenAt||{};S.seenAt[owner]=Date.now();};
+const _save20=save;save=function(){_save20();if(SB&&ME_ID&&S.myStory&&S.myStory.some(x=>!x.sid&&!x.up&&x.img)){clearTimeout(save._st);save._st=setTimeout(pushStories,600);}};
+(function(){const _after=afterLogin;afterLogin=async function(){await _after();pushStories();loadStories(true);};})();
+const _renderChat20=renderChat;renderChat=function(){_renderChat20.apply(this,arguments);loadStories(false);};
+
+/* ====================== v21: REAL group calls (up to 8, every phone connects to every phone) ====================== */
+(function(){const T={'Add a friend':['Ajouter un ami','הוסף חבר','أضف صديقًا'],'Group call':['Appel de groupe','שיחה קבוצתית','مكالمة جماعية'],'left the call':['a quitté l’appel','יצא/ה מהשיחה','غادر المكالمة'],'joined':['a rejoint','הצטרף/ה','انضم'],
+ 'Max 8 people in a call':['8 personnes maximum par appel','עד 8 אנשים בשיחה','8 أشخاص كحد أقصى']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});
+ const css=document.createElement('style');css.textContent=`#call .tile video.gv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}#call .tile .lvl{position:absolute;inset:0;border-radius:18px;box-shadow:inset 0 0 0 3px #22C55E;opacity:0;transition:opacity .15s;pointer-events:none}`;document.head.appendChild(css);})();
+const GC={on:false,id:null,video:false,members:new Set(),peers:{}};
+function gcPeer(u){if(GC.peers[u])return GC.peers[u];const pc=new RTCPeerConnection({iceServers:ICE});const P={pc,stream:new MediaStream(),pend:[],offered:false};GC.peers[u]=P;
+  if(RC.local)RC.local.getTracks().forEach(tr=>pc.addTrack(tr,RC.local));
+  pc.onicecandidate=e=>{if(e.candidate)gcSend(u,{t:'gice',c:e.candidate.toJSON?e.candidate.toJSON():e.candidate});};
+  pc.ontrack=e=>{(e.streams[0]?e.streams[0].getTracks():[e.track]).forEach(tr=>{if(!P.stream.getTracks().includes(tr))P.stream.addTrack(tr);});gcAudio(u);gcTiles();};
+  pc.onconnectionstatechange=()=>{if(pc.connectionState==='failed'||pc.connectionState==='closed')gcDrop(u,false);};return P;}
+function gcSend(u,m){const payload=Object.assign({from:ME_ID,callId:GC.id},m);(async()=>{try{const ch=await rcOut(u);await ch.send({type:'broadcast',event:'sig',payload});}catch(_){}})();}
+async function gcOffer(u){const P=gcPeer(u);if(P.offered)return;P.offered=true;const o=await P.pc.createOffer();await P.pc.setLocalDescription(o);gcSend(u,{t:'goffer',sdp:P.pc.localDescription.toJSON?P.pc.localDescription.toJSON():P.pc.localDescription});}
+function gcMeet(u){if(u===ME_ID||!GC.on)return;GC.members.add(u);gcPeer(u);if(ME_ID<u)gcOffer(u);gcSync();}
+function gcAudio(u){const P=GC.peers[u];if(!P)return;let a=document.getElementById('ga_'+u);if(!a){a=document.createElement('audio');a.id='ga_'+u;a.autoplay=true;a.setAttribute('playsinline','');document.body.appendChild(a);}if(a.srcObject!==P.stream){a.srcObject=P.stream;a.play().catch(()=>{});}}
+function gcDrop(u,notify){const P=GC.peers[u];if(!P)return;try{P.pc.close();}catch(_){}delete GC.peers[u];GC.members.delete(u);const a=document.getElementById('ga_'+u);if(a)a.remove();
+  if(notify!==false&&USERS[rid(u)])toast(firstName(USERS[rid(u)].name)+' '+t('left the call'));gcSync();if(GC.on&&!Object.keys(GC.peers).length&&!(RC.pc&&RC.connected))rcHang(false);}
+async function gcEnsure(list){const miss=list.filter(u=>!USERS[rid(u)]);if(!miss.length)return;miss.forEach(u=>addReal({id:u,username:'…',color:'#555'}));try{const {data}=await SB.from('profiles').select('*').in('id',miss);(data||[]).forEach(p=>{delete USERS[rid(p.id)];addReal(p);});}catch(_){}if(GC.on)renderCall();}
+function gcSync(){if(!GC.on)return;gcEnsure([...GC.members].filter(u=>u!==ME_ID));CALL.people=[...GC.members].filter(u=>u!==ME_ID).map(rid);CALL.group=true;renderCall();}
+function gcTiles(){if(!GC.on)return;const tiles=$$('#call .cgrid .tile:not(.me)');CALL.people.forEach((id,i)=>{const u=uuidOf(id);const tile=tiles[i];if(!tile)return;
+  let st=null;if(u===RC.peer&&RC.remote)st=RC.remote;else if(GC.peers[u])st=GC.peers[u].stream;if(!st)return;
+  if(st.getVideoTracks().length){let v=tile.querySelector('video.gv');if(!v){tile.insertAdjacentHTML('afterbegin','<video class="gv" autoplay playsinline muted></video>');v=tile.querySelector('video.gv');}if(v.srcObject!==st){v.srcObject=st;v.play().catch(()=>{});}}});}
+/* start: turn the current 1-to-1 call into a group by adding a friend */
+function gcFromRC(){if(GC.on)return;GC.on=true;GC.id=RC.callId;GC.video=CALL.video;GC.members=new Set([ME_ID,RC.peer]);GC.peers={};}
+function gcAddPicker(){const inCall=new Set([...GC.members,RC.peer].filter(Boolean));const can=Object.keys(USERS).filter(id=>uuidOf(id)&&isFriend(id)&&!inCall.has(uuidOf(id))&&!S.blocked[id]);
+  openSheet(`<h3>${t('Add a friend')}</h3><p class="muted" style="margin:0 0 6px;font-size:13px">${t('Max 8 people in a call')}</p>${can.map(x=>`<button class="pick" data-gadd="${x}">${avHTML(x,42)}<b>${esc(USERS[x].name)}</b><span>${SV(ICONS.plus,'style="width:18px;height:18px"')}</span></button>`).join('')||`<p class="muted">${t('No results.')}</p>`}`);
+  $('#sheet').querySelectorAll('[data-gadd]').forEach(b=>b.onclick=()=>{const u=uuidOf(b.dataset.gadd);if((GC.on?GC.members.size:2)>=8){toast(t('Max 8 people in a call'));return;}closeSheet();
+    gcFromRC();GC.members.add(u);const members=[...GC.members];members.forEach(m=>{if(m!==ME_ID&&m!==u)gcSend(m,{t:'gadd',members});});
+    gcSend(u,{t:'ginvite',members,video:CALL.video,name:me().username});pushCall(u,CALL.video);CALL.menu=false;gcSync();});}
+const _renderCall21=renderCall;renderCall=function(){_renderCall21();if(!CALL.real)return;const c=$('#call');
+  c.querySelectorAll('[data-cm="add"]').forEach(b=>b.onclick=()=>gcAddPicker());if(GC.on){gcTiles();if(CALL.people.length>1){const tb=c.querySelector('.ctop b');if(tb)tb.textContent=t('Group call');const sm=c.querySelector('.ctop small');if(sm){sm.setAttribute('dir','ltr');sm.textContent=(CALL.people.length+1)+' / 8';}}}};
+/* signals */
+const _rcOnSig21=rcOnSig;rcOnSig=async function(p){if(!p||!p.t||p.t[0]!=='g')return _rcOnSig21(p);
+  if(p.t==='ginvite'){if(RC.pc||GC.on){gcSend(p.from,{t:'gbusy',callId:p.callId});return;}if(p.callId===RC.callId&&$('#inc').classList.contains('on'))return;RC.callId=p.callId;
+    if(!USERS[rid(p.from)]){const {data}=await SB.from('profiles').select('*').eq('id',p.from).maybeSingle();if(data)addReal(data);}
+    rcShowIncoming(Object.assign({},p,{t:'invite'}));
+    $('#incYes').onclick=async()=>{$('#inc').classList.remove('on');try{await rcMedia(p.video);}catch(_){askPerm(p.video,()=>{$('#inc').classList.add('on');$('#incYes').click();});return;}
+      GC.on=true;GC.id=p.callId;GC.video=!!p.video;GC.members=new Set(p.members);GC.peers={};RC.callId=p.callId;
+      Object.assign(CALL,{id:rid(p.from),video:!!p.video,t0:Date.now(),muted:false,spk:false,menu:false,filters:false,filter:'none',people:[],host:false,real:true});RC.connected=true;
+      $('#call').classList.add('on');gcSync();clearInterval(CALL.timer);CALL.timer=setInterval(()=>{const e=$('#callTime');if(e)e.textContent=callClock();},1000);
+      p.members.forEach(m=>{if(m!==ME_ID)gcSend(m,{t:'gjoin',members:p.members});});};
+    return;}
+  if(p.callId!==GC.id&&p.callId!==RC.callId)return;
+  if(p.t==='gadd'){gcFromRC();(p.members||[]).forEach(m=>{if(m!==ME_ID)GC.members.add(m);});gcSync();return;}
+  if(!GC.on)return;
+  if(p.t==='gjoin'){if(p.from===RC.peer)return;gcSend(p.from,{t:'ghere'});gcMeet(p.from);if(USERS[rid(p.from)])toast(firstName(USERS[rid(p.from)].name)+' '+t('joined'));return;}
+  if(p.t==='ghere'){gcMeet(p.from);return;}
+  if(p.t==='gleave'){gcDrop(p.from);return;}
+  const P=gcPeer(p.from);
+  if(p.t==='goffer'){await P.pc.setRemoteDescription(p.sdp);for(const c of P.pend.splice(0)){try{await P.pc.addIceCandidate(c);}catch(_){}}const a=await P.pc.createAnswer();await P.pc.setLocalDescription(a);gcSend(p.from,{t:'ganswer',sdp:P.pc.localDescription.toJSON?P.pc.localDescription.toJSON():P.pc.localDescription});}
+  else if(p.t==='ganswer'){await P.pc.setRemoteDescription(p.sdp);for(const c of P.pend.splice(0)){try{await P.pc.addIceCandidate(c);}catch(_){}}}
+  else if(p.t==='gice'){if(P.pc.remoteDescription){try{await P.pc.addIceCandidate(p.c);}catch(_){}}else P.pend.push(p.c);}};
+/* in a group, "end" from the first friend only means they left */
+const _rcOnSig21b=rcOnSig;rcOnSig=async function(p){if(GC.on&&p&&p.t==='end'&&p.from===RC.peer){try{RC.pc&&RC.pc.close();}catch(_){}RC.pc=null;RC.remote=null;const a=$('#rcAudio');if(a)a.srcObject=null;GC.members.delete(p.from);
+    if(USERS[rid(p.from)])toast(firstName(USERS[rid(p.from)].name)+' '+t('left the call'));if(!Object.keys(GC.peers).length){rcHang(false,true);return;}gcSync();return;}return _rcOnSig21b(p);};
+const _rcHang21=rcHang;rcHang=function(notify,fromPeer){if(GC.on){Object.keys(GC.peers).forEach(u=>{gcSend(u,{t:'gleave'});try{GC.peers[u].pc.close();}catch(_){}const a=document.getElementById('ga_'+u);if(a)a.remove();});
+    GC.on=false;GC.peers={};GC.members=new Set();CALL.group=false;CALL.people=[];if(!RC.pc&&!RC.callId){_endCall18();return;}}return _rcHang21.apply(this,arguments);};
+/* the first friend's tile also shows their video */
+const _rcRemoteVideo21=rcRemoteVideo;rcRemoteVideo=function(){if(GC.on&&CALL.people.length>1){gcTiles();let a=$('#rcAudio');if(RC.remote){if(!a){a=document.createElement('audio');a.id='rcAudio';a.autoplay=true;a.setAttribute('playsinline','');document.body.appendChild(a);}if(a.srcObject!==RC.remote){a.srcObject=RC.remote;a.play().catch(()=>{});}}return;}return _rcRemoteVideo21();};
