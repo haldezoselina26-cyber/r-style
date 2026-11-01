@@ -668,6 +668,6 @@ async function aiProductPhoto(src,rec){if(!(S.vip&&AI&&AI.gemini))return null;tr
 document.addEventListener('click',async e=>{const b=e.target.closest('#recSave');if(!b||!recSrc||b.dataset.busy)return;e.stopImmediatePropagation();e.preventDefault();b.dataset.busy='1';
   b.innerHTML=`<span class="spin"></span> ${t('Ruby is making clean photos of your clothes…')}`;try{if(recBoxesP)await Promise.race([recBoxesP,new Promise(r=>setTimeout(r,12000))]);}catch(_){}
   let a=0,m=[];for(const r of recs.filter(r=>r.on)){if(r.match&&r.same){m.push(r.match);continue;}
-    let img=null;const crop=await productPhoto(recSrc,r.box);img=(await aiProductPhoto(crop||recSrc,r))||crop||recImg;
+    let img=null;const crop=await productPhoto(recSrc,r.box);img=(await aiProductPhoto(recSrc,r))||crop||recImg;
     S.wardrobe.unshift({id:'w'+Date.now()+a,name:r.name,cat:r.cat,img:await downscale(img,600,.85),color:r.color,colorName:r.colorName,warmth:r.warmth,style:r.style,occasion:r.occasion});a++;}
   if(m.length)markWorn(m);S.today=null;save();closeSheet();wCat='All';wTab='items';$$('[data-wt]').forEach(x=>x.classList.toggle('on',x.dataset.wt==='items'));show('wardrobe');toast(t('Added {a} · worn today {b}',{a,b:m.length}));recSrc=null;},true);
