@@ -334,7 +334,7 @@ function askPerm(video,onOk,onNo){let tries=0;openSheet(`<h3>🎙️${video?' �
   <button class="btn primary" id="permGo" style="margin-top:14px">${t('Allow camera and microphone')}</button><p class="muted" id="permHelp" style="display:none;margin:12px 0 0;font-size:13px;line-height:1.5"></p><button class="btn" id="permNo" style="margin-top:8px">${t('Cancel')}</button>`);
   $('#permNo').onclick=()=>{closeSheet();onNo&&onNo();};
   $('#permGo').onclick=async()=>{tries++;try{const st=await navigator.mediaDevices.getUserMedia({audio:true,video:!!video});st.getTracks().forEach(x=>x.stop());closeSheet();onOk();}
-    catch(_){const h=$('#permHelp');if(h){h.style.display='block';h.textContent=t('Still blocked? In Safari tap “aA” next to the address → Website Settings → Camera and Microphone → Allow. Then come back and tap the button again.');}}};}
+    catch(err){const h=$('#permHelp');if(h){h.style.display='block';h.textContent=t('Still blocked? In Safari tap “aA” next to the address → Website Settings → Camera and Microphone → Allow. Then come back and tap the button again.')+' ('+((err&&err.name)||'error')+')';}}};}
 /* outgoing */
 const _startCall18=startCall;
 startCall=async function(id,video){const u=uuidOf(roomInfo(id).uid||id);if(!(REAL&&SB&&ME_ID&&u))return _startCall18(id,video);
