@@ -81,7 +81,7 @@ function listen(){if(SBchan)SB.removeChannel(SBchan);
   SBchan=SB.channel('msgs-'+ME_ID)
    .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`receiver=eq.${ME_ID}`},async p=>{const m=p.new;const id=rid(m.sender);
       if(!USERS[id]){const {data}=await SB.from('profiles').select('*').eq('id',m.sender).maybeSingle();if(data)addReal(data);}
-      const a=S.chats[id]=S.chats[id]||[];if(a.some(x=>x.dbid===m.id))return;const here=current==='room'&&roomId===id;
+      S.realFans=S.realFans||{};S.realFans[id]=true;const a=S.chats[id]=S.chats[id]||[];if(a.some(x=>x.dbid===m.id))return;const here=current==='room'&&roomId===id;
       if(TYroom===id){clearTimeout(TYoff);typingRoom=null;}const loc=Object.assign(toLocal(m),{read:here});try{await signAll([loc]);}catch(_){}a.push(loc);save();if(here){renderMsgs();markReadReal(id);}else if(current==='chat')renderChatList();
       if(navigator.vibrate)try{navigator.vibrate(15);}catch(_){}})
    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'messages',filter:`sender=eq.${ME_ID}`},p=>{const m=p.new;const a=S.chats[rid(m.receiver)]||[];const x=a.find(y=>y.dbid===m.id);
@@ -115,7 +115,7 @@ function hookFollow(){const _tf=toggleFollow;
   toggleFollow=function(uid){const u=uuidOf(uid);if(!u)return _tf(uid);const on=!S.following[uid];S.following[uid]=on;save();
     (on?SB.from('follows').insert({follower:ME_ID,followee:u}):SB.from('follows').delete().eq('follower',ME_ID).eq('followee',u)).then(()=>{});
     $$(`[data-follow="${uid}"],[data-rfo="${uid}"]`).forEach(b=>{b.classList.toggle('on',on);b.textContent=on?t('Followed'):t('Follow');});
-    if(on)toast(t('You are now friends with {n}: you can call them',{n:USERS[uid].name}));};
+    if(on&&(S.realFans||{})[uid])toast(t('You are now friends with {n}: you can call them',{n:USERS[uid].name}));};
   const _isF=isFriend;isFriend=function(id){if(uuidOf(id))return !!S.following[id]&&!!(S.realFans||{})[id];return _isF(id);};}
 
 /* ---------- search real people ---------- */
@@ -279,7 +279,7 @@ async function aiSafe(dataUrl){if(!AI||!AI_IMG||!dataUrl)return true;try{const r
 /* profile photo: checked before it is saved on the server */
 const _pushPhoto16=pushPhoto;pushPhoto=async function(){const ph=me().photo||null;if(ph&&S.photoSynced!==ph&&!(await aiSafe(ph))){S.profile.photo=null;save();toast(t('This photo is not allowed on R-Style.'));if(typeof renderMe==='function')try{renderMe();}catch(_){}return;}return _pushPhoto16();};
 /* video messages: one image of the video is checked before sending */
-const _pushMsg16=pushMsg;pushMsg=function(id,m){if(m&&m.f==='me'&&m.vid&&!m._ok&&AI&&AI_IMG){(async()=>{toast(t('Checking…'));const fr=await videoFrame(m.vid);if(fr&&!(await aiSafe(fr.img))){openSheet(`<div class="verdict bad"><span></span><span><b>${t('Photo blocked')}</b><br>${t('This image is not allowed on R-Style.')}</span></div>`);return;}m._ok=1;_pushMsg16(id,m);})();return;}return _pushMsg16(id,m);};
+const PUSHW=[];PUSHW.push(function(){const _pushMsg16=pushMsg;pushMsg=function(id,m){if(m&&m.f==='me'&&m.vid&&!m._ok&&AI&&AI_IMG){(async()=>{toast(t('Checking…'));const fr=await videoFrame(m.vid);if(fr&&!(await aiSafe(fr.img))){openSheet(`<div class="verdict bad"><span></span><span><b>${t('Photo blocked')}</b><br>${t('This image is not allowed on R-Style.')}</span></div>`);return;}m._ok=1;_pushMsg16(id,m);})();return;}return _pushMsg16(id,m);};});
 
 /* ====================== v17: delete account for real (Edge Function "delete-account") ====================== */
 document.addEventListener('click',async e=>{const b=e.target.closest('#delYes');if(!b||!SB||!ME_ID)return;e.stopImmediatePropagation();e.preventDefault();
@@ -497,9 +497,9 @@ const _rcHang19=rcHang;rcHang=function(){clearInterval(RC.reinv);RC.accepted=fal
 
 /* ====================== v19.1 message notifications + clear AI errors ====================== */
 async function pushText(u,text){try{await SB.functions.invoke(PUSH_FN,{body:{to:u,text:String(text||'').slice(0,100)}});}catch(_){}}
-(function(){const _p=pushMsg;pushMsg=function(id,m){const r=_p.apply(this,arguments);const u=uuidOf(id);
+PUSHW.push(function(){const _p=pushMsg;pushMsg=function(id,m){const r=_p.apply(this,arguments);const u=uuidOf(id);
   if(u&&m&&m.f==='me'&&SB&&ME_ID){const prev=m.t||(m.vid?'🎬 '+t('Video message'):m.a||m.voice?'🎙️ '+t('Voice message'):m.img?'📷 '+t('Photo'):'');const cid=setInterval(()=>{if(m.dbid){clearInterval(cid);pushText(u,prev);}if(m.failed)clearInterval(cid);},700);setTimeout(()=>clearInterval(cid),30000);}
-  return r;};})();
+  return r;};});
 const _aiErr191=aiErr;aiErr=function(e){if(AI&&AI.gemini){const m=String((e&&(e.message||e.error))||e||'');
   if(/quota|429|rate|RESOURCE_EXHAUSTED/i.test(m))return t('Ruby is busy right now. Try again in a minute.');return t('Ruby could not answer. Please try again.')+' ('+m.slice(0,140)+')';}return _aiErr191(e);};
 const _gemCall191=gemCall;gemCall=async function(body){try{return await _gemCall191(body);}catch(e){let msg=e&&e.message||String(e);try{if(e&&e.context&&e.context.json){const j=await e.context.json();msg=(j&&(j.error||j.message))||msg;}}catch(_){}const er=new Error(msg);if(e&&e.code)er.code=e.code;throw er;}};
@@ -591,3 +591,38 @@ const _rcHang21=rcHang;rcHang=function(notify,fromPeer){if(GC.on){Object.keys(GC
     GC.on=false;GC.peers={};GC.members=new Set();CALL.group=false;CALL.people=[];if(!RC.pc&&!RC.callId){_endCall18();return;}}return _rcHang21.apply(this,arguments);};
 /* the first friend's tile also shows their video */
 const _rcRemoteVideo21=rcRemoteVideo;rcRemoteVideo=function(){if(GC.on&&CALL.people.length>1){gcTiles();let a=$('#rcAudio');if(RC.remote){if(!a){a=document.createElement('audio');a.id='rcAudio';a.autoplay=true;a.setAttribute('playsinline','');document.body.appendChild(a);}if(a.srcObject!==RC.remote){a.srcObject=RC.remote;a.play().catch(()=>{});}}return;}return _rcRemoteVideo21();};
+
+/* ====================== v22: write to anyone → it arrives as a message request; accept = become friends ====================== */
+(function(){const T={'Request sent ✉️ They will see it in their message requests.':['Demande envoyée ✉️ Elle apparaîtra dans ses demandes de messages.','הבקשה נשלחה ✉️ היא תופיע אצלו/ה בבקשות ההודעות.','تم إرسال الطلب ✉️ سيظهر في طلبات الرسائل.'],
+ 'You can send photos, videos and voice messages after they accept.':['Tu pourras envoyer photos, vidéos et vocaux quand la personne aura accepté.','אפשר יהיה לשלוח תמונות, סרטונים והקלטות אחרי שיאשרו.','يمكنك إرسال الصور والفيديو والرسائل الصوتية بعد القبول.'],
+ 'Waiting for {n} to accept':['En attente que {n} accepte','מחכים ש{n} יאשר/תאשר','بانتظار قبول {n}'],'Max 3 messages before they accept.':['3 messages maximum avant qu’elle accepte.','עד 3 הודעות לפני האישור.','3 رسائل كحد أقصى قبل القبول.'],
+ 'wants to be your friend':['veut être ton ami(e)','רוצה להיות חבר/ה שלך','يريد أن يكون صديقك']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});
+ const css=document.createElement('style');css.textContent=`#room .reqNote{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 74px);z-index:3;background:rgba(0,0,0,.55);color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:14px;white-space:nowrap}`;document.head.appendChild(css);})();
+function realReqs(){const out=[];for(const id in S.chats){if(!uuidOf(id)||S.blocked[id]||(S.reqHidden||{})[id])continue;if(S.following[id])continue;const a=S.chats[id]||[];if(!a.some(m=>m.f==='them'))continue;out.push(id);}return out;}
+/* sender: first message = follow + request (text only) */
+PUSHW.push(function(){const _p=pushMsg;pushMsg=function(id,m){const u=uuidOf(id);if(u&&m&&m.f==='me'&&!isFriend(id)){
+    if(!m.t){toast(t('You can send photos, videos and voice messages after they accept.'));return;}
+    const mine=(S.chats[id]||[]).filter(x=>x.f==='me').length;if(mine>=3){toast(t('Max 3 messages before they accept.'));return;}
+    if(!S.following[id]){toggleFollow(id);setTimeout(()=>_p.call(this,id,m),600);if(!mine)toast(t('Request sent ✉️ They will see it in their message requests.'));return;}}
+  return _p.apply(this,arguments);};});
+/* room: small note while waiting */
+(function(){const _o=openRoom;openRoom=function(id){const r=_o.apply(this,arguments);$('#room .reqNote')?.remove();if(uuidOf(id)&&!isFriend(id)&&S.following[id])$('#room').insertAdjacentHTML('beforeend',`<div class="reqNote">⏳ ${esc(t('Waiting for {n} to accept',{n:firstName(USERS[id].name)}))}</div>`);return r;};})();
+/* receiver: requests are not in the normal list, they are behind the "Message requests" bar */
+const _renderChatList22=renderChatList;renderChatList=function(){_renderChatList22();const q=($('#chatSearch')?.value||'').trim();const reqs=realReqs();
+  reqs.forEach(id=>$(`#convs .crow[data-room="${id}"]`)?.remove());
+  const total=reqs.length+(S.requests||[]).length;let bar=$('#reqBar');
+  if(total&&!q){if(!bar){$('#convs').insertAdjacentHTML('afterbegin',`<button class="reqLine" id="reqBar"><span>${t('Message requests')}</span><span>${total}</span></button>`);}else{const n=bar.querySelectorAll('span');if(n[1])n[1].textContent=total;}}};
+openRequests=function(){const reqs=realReqs();
+  openSheet(`<h3>📨 ${t('Message requests')}</h3><p class="muted" style="margin:0 0 6px;font-size:13px">${t('They can\'t see if you read it until you accept.')}</p>
+   ${reqs.map(id=>{const u=USERS[id];const a=S.chats[id]||[];const last=[...a].reverse().find(m=>m.f==='them');return `<div class="pick">${avHTML(id,42)}<b>${esc(u.name)}<br><small class="muted" style="font-weight:500">${esc(last&&last.t||t('wants to be your friend'))}</small></b><button class="chip on" data-racc="${id}">${t('Accept')}</button><button class="chip" data-rdec="${id}">✕</button></div>`;}).join('')}
+   ${(S.requests||[]).map(r=>`<div class="pick"><span class="av" style="width:42px;height:42px;background:${r.color}">${initials(r.name)}</span><b>${esc(r.name)}<br><small class="muted" style="font-weight:500">${esc(r.text)}</small></b><button class="chip on" data-acc="${r.id}">${t('Accept')}</button><button class="chip" data-dec="${r.id}">✕</button></div>`).join('')}
+   ${!reqs.length&&!(S.requests||[]).length?`<p class="muted">${t('No requests.')}</p>`:''}`);
+  $('#sheet').querySelectorAll('[data-racc]').forEach(b=>b.onclick=()=>{const id=b.dataset.racc;if(!S.following[id])toggleFollow(id);S.realFans=S.realFans||{};S.realFans[id]=true;save();closeSheet();openRoom(id);toast(t('You are now friends with {n}: you can call them',{n:USERS[id].name}));});
+  $('#sheet').querySelectorAll('[data-rdec]').forEach(b=>b.onclick=()=>{S.reqHidden=S.reqHidden||{};S.reqHidden[b.dataset.rdec]=true;save();closeSheet();renderChatList();toast(t('Request deleted'));});
+  $('#sheet').querySelectorAll('[data-acc]').forEach(b=>b.onclick=()=>{const r=S.requests.find(x=>x.id===b.dataset.acc);S.requests=S.requests.filter(x=>x!==r);const gid='q'+r.id;S.groups.push({id:gid,name:r.name,members:[],dm:true,color:r.color});S.chats[gid]=[{f:'them',t:r.text}];save();closeSheet();openRoom(gid);});
+  $('#sheet').querySelectorAll('[data-dec]').forEach(b=>b.onclick=()=>{S.requests=S.requests.filter(x=>x.id!==b.dataset.dec);save();closeSheet();renderChatList();toast(t('Request deleted'));});};
+/* a friend request accepted on the other phone → we become friends live */
+(function(){const _after=afterLogin;afterLogin=async function(){await _after();try{SB.channel('fol-'+ME_ID).on('postgres_changes',{event:'INSERT',schema:'public',table:'follows',filter:`followee=eq.${ME_ID}`},p=>{const id=rid(p.new.follower);S.realFans=S.realFans||{};S.realFans[id]=true;save();if(current==='chat')renderChatList();if(current==='room'&&roomId===id){$('#room .reqNote')?.remove();}}).subscribe();}catch(_){}};})();
+
+/* install the send-message extensions after the server hook (hookPush runs when Supabase is ready) */
+const _hookPushW=hookPush;hookPush=function(){_hookPushW();PUSHW.forEach(f=>f());};
