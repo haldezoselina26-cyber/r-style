@@ -1109,3 +1109,6 @@ const _renderSnap109=renderSnap;renderSnap=function(){_renderSnap109();const s=$
 ICONS.home='<path d="M3 11.2 12 3.6l9 7.6"/><path d="M5.2 9.6V20.4h13.6V9.6"/><path d="M10 20.4v-5.2a2 2 0 0 1 4 0v5.2"/><path d="M16.2 5.9V3.6h2v4"/>';
 (function(){const css=document.createElement('style');css.textContent=`#nav [data-go="home"].on svg path:nth-child(2){fill:currentColor;fill-opacity:.18}#nav [data-go="home"] svg{width:26px;height:26px}`;document.head.appendChild(css);
  $$('i[data-ic="home"]').forEach(el=>{el.innerHTML=SV(ICONS.home);});})();
+
+/* v11.3 avatar v5: Gold gets the high-detail version */
+(function(){const _a=avCfg;avCfg=function(){const c=_a();c.gold=!!S.vip;return c;};})();
