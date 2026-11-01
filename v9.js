@@ -524,11 +524,11 @@ $('#rubyForm').onsubmit=async e=>{e.preventDefault();if(rubyBusy)return;
   S.ruby.push({role:'user',text:text||'…',img:img?await downscale(img,360,.7):null});if(!S.vip)S.rubyDay.n++;save();renderRuby();
   const box=$('#rubyMsgs');const d=document.createElement('div');d.className='m them';d.innerHTML='<span class="spin"></span>';box.appendChild(d);box.scrollTop=box.scrollHeight;
   rubyBusy=true;$('#rubySend').disabled=true;
-  const hist=S.ruby.filter(m=>!m.modestQ).slice(-10).map(m=>({role:m.role,content:m.text+(m.img?' [photo attached]':'')}));while(hist.length&&hist[0].role!=='user')hist.shift();
+  const hist=S.ruby.filter(m=>!m.modestQ&&!m.err).slice(-10).map(m=>({role:m.role,content:m.text+(m.img?' [photo attached]':'')}));while(hist.length&&hist[0].role!=='user')hist.shift();
   hist[0]={role:'user',content:`${RUBY9}\n\n${userCtx()}\n\n---\n${hist[0].content}`};
   try{const opts={cache:false,onText:({text})=>{d.innerHTML=md(text);box.scrollTop=box.scrollHeight;}};if(img&&AI_IMG)opts.images=[dataUrlToBlob(img)];
     const r=await AI(hist,opts);S.ruby.push({role:'assistant',text:r.text||'…'});if(S.ruby.length>40)S.ruby=S.ruby.slice(-40);save();
-  }catch(err){d.textContent=aiErr(err);if(!S.vip)S.rubyDay.n=Math.max(0,S.rubyDay.n-1);S.ruby.pop();save();}
+  }catch(err){console.warn('ruby',err);const em=aiErr(err)+(err&&err.message?' ('+String(err.message).slice(0,140)+')':'');d.textContent=em;if(!S.vip)S.rubyDay.n=Math.max(0,S.rubyDay.n-1);S.ruby.push({role:'assistant',text:'⚠️ '+em,err:true});save();}
   rubyBusy=false;$('#rubySend').disabled=false;if(current==='ruby')renderRuby();};
 
 /* ====================== WARDROBE: accessories (incl. head accessories) ====================== */
