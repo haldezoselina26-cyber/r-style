@@ -715,3 +715,8 @@ document.addEventListener('click',e=>{const b=e.target.closest('.acts .moreAct')
  const sb=$('#searchBox');if(sb)sb.hidden=false;
  /* "New group" moves into the attach menu? No: it goes to the long-press on the title → keep it reachable from the search bar */
  const box=$('#searchBox');if(box&&!box.querySelector('.ngBtn')){box.insertAdjacentHTML('beforeend',`<button type="button" class="ngBtn" aria-label="${t('New group')}" style="border:0;background:none;color:var(--muted);display:grid;place-items:center;padding:0 2px">${SV(ICONS.group,'style="width:20px;height:20px"')}</button>`);box.querySelector('.ngBtn').onclick=e=>{e.preventDefault();$('#newGroup').click();};}})();
+
+/* v24.2 red dot on Messages = only REAL unread messages or real message requests (not the examples) */
+function realUnread(){let n=0;for(const id in S.chats){if(!uuidOf(id)||S.blocked[id])continue;const a=S.chats[id]||[];const m=a[a.length-1];if(m&&m.f==='them'&&!m.read)n++;}return n;}
+function fixChatDot(){if(!(REAL&&ME_ID))return;const d=$('#chatDot');if(!d)return;const n=realUnread()+realReqs().length;d.hidden=!n;if(n)d.textContent='';}
+setInterval(fixChatDot,800);
