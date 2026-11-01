@@ -855,3 +855,18 @@ const _openContact27=openContact;openContact=function(id){_openContact27(id);if(
 document.addEventListener('click',e=>{if(!e.target.closest('[data-gleave]'))return;e.stopPropagation();const id=ciId;closeOverlay('cinfo');gLeave(id);},true);
 const _avHTML25=avHTML;avHTML=function(u,size){if(u!=='me'&&!USERS[u])return `<span class="av" style="width:${size}px;height:${size}px;font-size:${Math.round(size*.36)}px;background:#555">?</span>`;return _avHTML25(u,size);};
 const _renderChallenge25=renderChallenge;renderChallenge=function(){if(REAL){const b=$('#challenge');if(b)b.innerHTML='';return;}return _renderChallenge25();};
+
+/* ====================== v29: no filters at all; "+" → Camera or Photos (gallery) ====================== */
+(function(){FT.failed=true;SNAP.filter='none';CALL.filter='none';
+ const css=document.createElement('style');css.textContent=`#snap #snapRing,#snap .bxTabs,#snap .fname,#snap .trk,#snap .bxOut,#call #callRing,#call .fhint,#call .fname,.cmenu [data-cm="filters"]{display:none!important}`;document.head.appendChild(css);
+ const _o=openSnap;openSnap=function(to){const r=_o(to);SNAP.filter='none';return r;};
+ const T={'Camera':['Caméra','מצלמה','الكاميرا'],'Photos':['Photos','תמונות','الصور'],'Take a photo or a video':['Prendre une photo ou une vidéo','לצלם תמונה או וידאו','التقاط صورة أو فيديو'],'From your gallery':['Depuis ta galerie','מהגלריה שלך','من معرض الصور']};
+ ['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
+async function openGallerySend(to){const fl=await pickFile('image/*,video/*');if(!fl)return;SNAP.to=to;SNAP.filter='none';SNAP.once=false;SNAP.img=null;SNAP.vid=null;SNAP.vidBlob=null;SNAP.raw=null;
+  if(fl.type.startsWith('video')){const url=URL.createObjectURL(fl);const fr=await videoFrame(url);if(fr&&fr.dur>61){toast(t('Video is too long (max 60 s)'));return;}if(fl.size>50*1024*1024){toast(t('This video is too big (max 50 MB).'));return;}
+    SNAP.vidBlob=fl;SNAP.vid=url;SNAP.vidDur=fr?fmtSec(fr.dur):'';}else SNAP.img=await downscale(await readFile(fl),1000,.85);
+  $('#snap').classList.add('on');renderSnap();}
+document.addEventListener('click',e=>{if(!e.target.closest('#attachBtn'))return;setTimeout(()=>{const ph=$('#atPhoto');if(!ph||$('#atGal'))return;
+  ph.querySelector('b').textContent='📷 '+t('Camera');const sm=ph.querySelector('small');if(sm)sm.textContent=t('Take a photo or a video');
+  ph.insertAdjacentHTML('afterend',`<button class="srow" id="atGal"><div class="l"><b>🖼️ ${t('Photos')}</b><small class="muted">${t('From your gallery')}</small></div></button>`);
+  $('#atGal').onclick=()=>{const to=roomId;closeSheet();openGallerySend(to);};},0);});
