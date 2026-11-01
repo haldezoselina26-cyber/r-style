@@ -1065,7 +1065,7 @@ const _renderSnap109=renderSnap;renderSnap=function(){_renderSnap109();const s=$
  if(GOLD){let h='';for(let i=0;i<46;i++)h+=`<i class="gl" style="left:${10+Math.random()*80}%;top:${28+Math.random()*44}%;animation-delay:${1+Math.random()*1.7}s"></i>`;el.insertAdjacentHTML('beforeend',h);}
  document.body.appendChild(el);
  /* original sound: deep "boom" + bright rising chord (made with Web Audio, no music files) */
- let played=false;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(_){}
+ let played=false;
  /* the sound is drawn into a small WAV file first, then played with a normal <audio> (works on iPhone, even in silent mode) */
  function design(c,t,gold){const out=c.createGain();out.gain.value=gold?.6:.62;
    /* reverb made from a short noise tail */
@@ -1096,7 +1096,7 @@ const _renderSnap109=renderSnap;renderSnap=function(){_renderSnap109();const s=$
  try{const O=window.OfflineAudioContext||window.webkitOfflineAudioContext;const oc=new O(1,32000*3.6,32000);design(oc,0.02,GOLD);const pr=oc.startRendering();
    const fin=ab=>{audio.src=URL.createObjectURL(toWav(ab));audio.load();};if(pr&&pr.then)pr.then(fin);else oc.oncomplete=e=>fin(e.renderedBuffer);}catch(_){}
  function sound(){if(played)return;played=true;try{const p=audio.play();if(p&&p.catch)p.catch(()=>{});}catch(_){}}
- let done=false;const finish=()=>{if(done)return;done=true;el.classList.add('out');setTimeout(()=>el.remove(),500);};
+ let done=false;const finish=()=>{if(done)return;done=true;try{if(navigator.audioSession)navigator.audioSession.type='auto';}catch(_){}el.classList.add('out');setTimeout(()=>el.remove(),500);};
  const go=()=>{el.classList.remove('wait');sound();setTimeout(finish,2900);};
  const native=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
  if(native)setTimeout(go,300);else el.classList.add('wait');

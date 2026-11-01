@@ -316,6 +316,7 @@ function rcRemoteVideo(){const st=$('#call .remote,#call .voiceAv');if(!RC.remot
   let a=$('#rcAudio');if(!a){a=document.createElement('audio');a.id='rcAudio';a.autoplay=true;a.setAttribute('playsinline','');document.body.appendChild(a);}if(a.srcObject!==RC.remote){a.srcObject=RC.remote;a.play().catch(()=>{});}
   if(CALL.video){const v=$('#call video.rv');if(v)v.muted=true;}}
 async function gumSafe(video){const md=navigator.mediaDevices;if(!md||!md.getUserMedia)throw new Error('NoMedia');
+  try{if(navigator.audioSession)navigator.audioSession.type='play-and-record';}catch(_){}
   try{if(SNAP&&SNAP.stream){SNAP.stream.getTracks().forEach(x=>x.stop());SNAP.stream=null;}}catch(_){}
   try{return await md.getUserMedia({audio:true,video:video?{facingMode:'user'}:false});}
   catch(e1){/* some iPads refuse camera+mic together: ask one by one and join them */
