@@ -1071,3 +1071,16 @@ let MXCH=null;function listen32(){if(!(SB&&ME_ID))return;if(MXCH)SB.removeChanne
    .on('postgres_changes',{event:'DELETE',schema:'public',table:'messages'},p=>{const id=p.old&&p.old.id;if(!id)return;const f=findDb(id);if(!f||f.m.del)return;const m=f.m;m.del=true;delete m.t;delete m.img;delete m.a;delete m.vid;m.voice=0;m.isVid=0;save();if(current==='room'&&roomId===f.room)renderMsgs();else if(current==='chat')renderChatList();})
    .subscribe();}
 {const _al32=afterLogin;afterLogin=async function(){await _al32();listen32();};}
+
+/* ====================== v33: Ruby answers fast (streamed word by word) ====================== */
+async function gemStream(body,onText){const {data:{session}}=await SB.auth.getSession();if(!session)throw new Error('Not signed in');
+  const r=await fetch(SB_URL+'/functions/v1/ruby',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:JSON.stringify(Object.assign({},body,{stream:true}))});
+  const ct=r.headers.get('content-type')||'';if(ct.includes('application/json')){const d=await r.json();if(d.error){const e=new Error(d.error);if(d.status===429)e.code='rate_limited';throw e;}if(onText)onText({text:d.text||''});return d.text||'';}
+  if(!r.ok||!r.body)throw new Error('AI error '+r.status);const rd=r.body.getReader(),dec=new TextDecoder();let text='',last=0;
+  for(;;){const {done,value}=await rd.read();if(done)break;text+=dec.decode(value,{stream:true});const now=performance.now();if(onText&&now-last>50){last=now;try{onText({text});}catch(_){}}}
+  if(onText)try{onText({text});}catch(_){}return text;}
+{const _mg=makeGemini;makeGemini=function(){const G0=_mg();const G=async function(msgs,opts={}){if(!opts.onText)return G0(msgs,opts);
+    const image=opts.images&&opts.images[0]?await blobToDataUrl(opts.images[0]):null;const body={messages:(msgs||[]).map(m=>({role:m.role,content:typeof m.content==='string'?m.content:JSON.stringify(m.content)})),image};
+    try{const text=await gemStream(body,opts.onText);return {text};}catch(e){if(e.code==='rate_limited')throw e;return G0(msgs,opts);}};
+  Object.assign(G,G0);G.json=G0.json;G.limits=G0.limits;G.gemini=true;return G;};
+ if(AI&&AI.gemini){AI=null;enableGemini();}}
