@@ -870,3 +870,36 @@ document.addEventListener('click',e=>{if(!e.target.closest('#attachBtn'))return;
   ph.querySelector('b').textContent='📷 '+t('Camera');const sm=ph.querySelector('small');if(sm)sm.textContent=t('Take a photo or a video');
   ph.insertAdjacentHTML('afterend',`<button class="srow" id="atGal"><div class="l"><b>🖼️ ${t('Photos')}</b><small class="muted">${t('From your gallery')}</small></div></button>`);
   $('#atGal').onclick=()=>{const to=roomId;closeSheet();openGallerySend(to);};},0);});
+
+/* ====================== v30: smoother app ====================== */
+/* 1. save to the phone at most every 0.4 s (big wardrobe photos made every save slow) */
+(function(){const _sv=save;let T=null,off=false;
+ save=function(){if(off||T)return;T=setTimeout(()=>{T=null;if(!off)_sv();},400);};
+ const flush=()=>{if(T){clearTimeout(T);T=null;if(!off)_sv();}};window.saveNow=flush;
+ addEventListener('pagehide',flush);addEventListener('beforeunload',flush);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush();});
+ const _rm=Storage.prototype.removeItem;Storage.prototype.removeItem=function(k){if(k===KEY){off=true;if(T){clearTimeout(T);T=null;}}return _rm.call(this,k);};})();
+/* 2. wardrobe photos: decode each big photo once (blob link instead of a huge text in every card) */
+(function(){const C=new Map();const blobOf=d=>{if(!d||!String(d).startsWith('data:'))return d;let u=C.get(d);if(!u){try{u=URL.createObjectURL(dataUrlToBlob(d));C.set(d,u);}catch(_){return d;}}return u;};
+ const _ph=itemPh;itemPh=function(it){if(it&&it.img&&String(it.img).startsWith('data:'))return `style="background-image:url(${blobOf(it.img)})"`;return _ph(it);};window.blobOf=blobOf;})();
+/* 3. Shorts: only the video on screen plays */
+(function(){let io=null;function watch(){const feed=$('#feed');if(!feed||!('IntersectionObserver' in window))return;if(io)io.disconnect();
+  io=new IntersectionObserver(es=>es.forEach(en=>{const v=en.target;if(en.isIntersecting&&en.intersectionRatio>.6&&current==='shorts'){v.preload='auto';const p=v.play();if(p&&p.catch)p.catch(()=>{});}else{try{v.pause();}catch(_){}}}),{root:feed,threshold:[0,.6]});
+  feed.querySelectorAll('video.bg').forEach((v,i)=>{v.removeAttribute('autoplay');v.autoplay=false;if(i>1)v.preload='metadata';try{if(i>0)v.pause();}catch(_){}io.observe(v);});}
+ const _rf=renderFeed;renderFeed=function(){const r=_rf.apply(this,arguments);watch();return r;};
+ const _sh=show;show=function(id){if(id!=='shorts')$$('#feed video').forEach(v=>{try{v.pause();}catch(_){}});return _sh.apply(this,arguments);};})();
+/* 4. long chats: only the last 60 messages are drawn, "earlier messages" loads more */
+window.MSG_LIM={};
+document.addEventListener('click',e=>{const b=e.target.closest('#msgs .moreMsgs');if(!b)return;const box=$('#msgs');const oh=box.scrollHeight,ot=box.scrollTop;MSG_LIM[roomId]=(MSG_LIM[roomId]||60)+60;renderMsgs();box.scrollTop=box.scrollHeight-oh+ot;});
+(function(){const _or=openRoom;openRoom=function(id){MSG_LIM[id]=60;return _or.apply(this,arguments);};
+ const css=document.createElement('style');css.textContent=`
+#msgs .moreMsgs{display:block;margin:8px auto 4px;border:0;border-radius:14px;padding:7px 14px;font:600 12.5px Inter,system-ui;background:var(--card2);color:var(--fg)}
+#convs .crow{content-visibility:auto;contain-intrinsic-size:auto 72px}
+.wgrid .item,.ogrid>*{content-visibility:auto;contain-intrinsic-size:auto 200px}
+html{-webkit-tap-highlight-color:transparent}
+button,a,.crow,.fc,.item{touch-action:manipulation}
+#feed{overscroll-behavior:contain}#msgs,#convs,.pscroll{overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch}`;document.head.appendChild(css);
+ const T={'Earlier messages':['Messages précédents','הודעות קודמות','رسائل سابقة']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
+/* 5. nav pill: measure once per frame (no double layout on every screen change) */
+(function(){const mp=window.movePill;if(!mp)return;let q=0;window.movePill=function(){if(q)return;q=requestAnimationFrame(()=>{q=0;mp();});};movePill=window.movePill;})();
+/* 6. camera: nothing to draw any more (no filters) */
+bxLoop=function(){cancelAnimationFrame(BX.raf);BX.raf=0;const o=$('#snap .bxOut');if(o)o.remove();};

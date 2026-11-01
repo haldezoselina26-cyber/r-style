@@ -154,7 +154,8 @@ function renderMsgs(){const box=$('#msgs');const r=roomInfo(roomId);const st=str
   let h=`<div class="daytag">${t('Today')}</div>`;
   if(st)h+=`<div class="daytag"><span class="flame ${st.warn?'warn':''}" style="justify-content:center">${SV(ICONS.flame)}${t('{n}-day streak',{n:st.n})}</span></div>`;
   let lastMe=-1;all.forEach((m,k)=>{if(m.f==='me')lastMe=k;});
-  all.forEach((m,k)=>{
+  const k0=Math.max(0,all.length-((window.MSG_LIM||{})[roomId]||60));if(k0>0)h+=`<button class="moreMsgs" type="button">${t('Earlier messages')}</button>`;
+  all.forEach((m,k)=>{if(k<k0)return;
     if(m.f==='sys'){h+=`<div class="daytag">${esc(m.t)}</div>`;return;}
     const cls='m '+(m.f==='me'?'me':'them')+(m.sticker?' sticker':'')+(m.rx&&m.rx.length?' hasrx':'')+(m.star?' starred':'')+(m.img&&!m.once?' pic':'');
     let inner='';if(r.group&&m.f!=='me'&&m.by)inner+=`<span class="from">${esc(USERS[m.by]?.name||'')}</span>`;
