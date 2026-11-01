@@ -671,3 +671,37 @@ document.addEventListener('click',async e=>{const b=e.target.closest('#recSave')
     let img=null;const crop=await productPhoto(recSrc,r.box);img=(await aiProductPhoto(recSrc,r))||crop||recImg;
     S.wardrobe.unshift({id:'w'+Date.now()+a,name:r.name,cat:r.cat,img:await downscale(img,600,.85),color:r.color,colorName:r.colorName,warmth:r.warmth,style:r.style,occasion:r.occasion});a++;}
   if(m.length)markWorn(m);S.today=null;save();closeSheet();wCat='All';wTab='items';$$('[data-wt]').forEach(x=>x.classList.toggle('on',x.dataset.wt==='items'));show('wardrobe');toast(t('Added {a} · worn today {b}',{a,b:m.length}));recSrc=null;},true);
+
+/* ====================== v24: SIMPLER — fewer buttons: extra actions live behind one "•••" button ====================== */
+(function(){const T={'More':['Plus','עוד','المزيد'],'Save this outfit':['Enregistrer la tenue','שמור את הלוק','احفظ الإطلالة'],'See it on my avatar':['Voir sur mon avatar','הצג על האווטאר שלי','اعرضه على الأفاتار'],
+ 'Send to a friend':['Envoyer à un ami','שלח לחבר','أرسل إلى صديق'],'Ruby\'s score':['Score de Ruby','הציון של רובי','تقييم روبي'],'Moves':['Mouvements','תנועות','حركات']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});
+ const css=document.createElement('style');css.textContent=`
+#feed .rail [data-sendshort],#feed .rail [data-why],#feed .rail [data-pmore]{display:none!important}
+#feed .rail .moreBtn svg{width:30px;height:30px}
+.acts [data-save],.acts [data-onav]{display:none!important}
+.acts .moreAct{flex:0 0 52px!important}
+.animBar>button[data-anim]{display:none!important}.animBar.open>button[data-anim]{display:grid!important;place-items:center}
+.animBar .animMain{width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:grid;place-items:center}
+.animBar .animMain svg{width:20px;height:20px}.animBar.open .animMain{background:var(--accent)}`;document.head.appendChild(css);})();
+const DOTS='<circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/>';
+function actionSheet(title,rows){openSheet(`<h3>${title}</h3>${rows.map((r,i)=>`<button class="srow" data-act="${i}"><div class="l"><b>${r[0]}</b></div></button>`).join('')}`);
+  $('#sheet').querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{const r=rows[+b.dataset.act];closeSheet();setTimeout(r[1],60);});}
+/* Shorts: like · comment · ••• */
+const _renderFeed24=renderFeed;renderFeed=function(){_renderFeed24.apply(this,arguments);
+  $$('#feed .short').forEach(el=>{const rail=el.querySelector('.rail');if(!rail||rail.querySelector('.moreBtn'))return;rail.insertAdjacentHTML('beforeend',`<button class="moreBtn" aria-label="${t('More')}">${SV(DOTS)}<span>${t('More')}</span></button>`);});};
+document.addEventListener('click',e=>{const b=e.target.closest('#feed .moreBtn');if(!b)return;e.stopPropagation();const rail=b.closest('.rail');const hid=s=>rail.querySelector(s);const rows=[];
+  if(hid('[data-sendshort]'))rows.push(['📤 '+t('Send to a friend'),()=>hid('[data-sendshort]').click()]);
+  if(hid('[data-why]'))rows.push(['💎 '+t('Ruby\'s score'),()=>hid('[data-why]').click()]);
+  const pm=hid('[data-pmore]');if(pm)rows.push([(pm.textContent.trim()===t('Delete')?'🗑️ ':'🚩 ')+pm.textContent.trim(),()=>pm.click()]);
+  actionSheet(t('More'),rows);},true);
+/* Home look card: "Wear today" + ••• */
+function addMoreActs(){$$('.acts').forEach(a=>{if(a.querySelector('.moreAct')||!a.querySelector('[data-save]'))return;a.insertAdjacentHTML('beforeend',`<button class="moreAct" aria-label="${t('More')}">${SV(DOTS)}</button>`);});}
+new MutationObserver(()=>addMoreActs()).observe(document.body,{childList:true,subtree:true});addMoreActs();
+document.addEventListener('click',e=>{const b=e.target.closest('.acts .moreAct');if(!b)return;e.stopPropagation();const a=b.closest('.acts');const rows=[];
+  const sv=a.querySelector('[data-save]'),av=a.querySelector('[data-onav]');if(sv)rows.push(['🔖 '+t('Save this outfit'),()=>sv.click()]);if(av)rows.push(['🧍 '+t('See it on my avatar'),()=>av.click()]);actionSheet(t('More'),rows);},true);
+/* Avatar moves: one button opens the 3 moves */
+(function(){const bar=$('#animBar');if(!bar)return;const fix=()=>{if(!bar.querySelector('.animMain'))bar.insertAdjacentHTML('afterbegin',`<button class="animMain" aria-label="${t('Moves')}">${SV('<path d="M8 5l11 7-11 7z" fill="currentColor"/>')}</button>`);};
+  new MutationObserver(fix).observe(bar,{childList:true});fix();
+  bar.addEventListener('click',e=>{if(e.target.closest('.animMain')){bar.classList.toggle('open');e.stopPropagation();return;}if(e.target.closest('[data-anim]'))setTimeout(()=>bar.classList.remove('open'),300);},true);})();
+/* home: Ruby is already first in Messages → no extra button at the top */
+(function(){const css=document.createElement('style');css.textContent='#rubyBtn{display:none!important}';document.head.appendChild(css);})();
