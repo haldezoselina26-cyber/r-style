@@ -1128,3 +1128,28 @@ const _renderWardrobe114=renderWardrobe;renderWardrobe=function(){const want=wCa
   $('#wFilters').innerHTML=W_CHIPS.map(c=>`<button class="chip ${c===wCat?'on':''}" data-f="${c}">${(v=>v==='w_'+c?window.W_EN['w_'+c]:v)(t('w_'+c))}</button>`).join('');
   if(special)$$('#wBody .item[data-item]').forEach(el=>{const it=findItem(el.dataset.item);if(!it)return;if((want==='Skirt')!==isSkirt(it))el.remove();});
   if(special&&!$('#wBody .item'))$('#wBody').innerHTML=`<p class="muted" style="text-align:center;margin-top:40px">${t('Nothing here yet. Tap ＋ to scan clothes.')}</p>`;};
+
+/* v11.5 wardrobe = big category cubes (no buttons). Tap a cube → all the clothes of that kind */
+(function(){const css=document.createElement('style');css.textContent=`
+.wcubes{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:start}
+.wcube{position:relative;aspect-ratio:1/1;border-radius:22px;background:var(--card);overflow:hidden;text-align:start;border:0;padding:0;color:var(--fg)}
+.wcube .mos{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px}
+.wcube .mos i{display:grid;place-items:center;background-size:cover;background-position:center}.wcube .mos i svg{width:40%;height:40%;color:rgba(0,0,0,.3)}
+.wcube .mos.one{grid-template-columns:1fr;grid-template-rows:1fr}.wcube .mos.two{grid-template-rows:1fr}.wcube .mos svg{width:34px!important;height:34px!important;max-width:none!important;max-height:none!important;color:rgba(0,0,0,.28)}
+.wcube .lab{position:absolute;left:10px;right:10px;bottom:10px;display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.88);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-radius:14px;padding:8px 12px;color:#111}
+body.gold .wcube .lab,body.dark .wcube .lab{background:rgba(20,20,24,.82);color:#fff}
+.wcube .lab b{font-size:16px}.wcube .lab span{font-size:13px;opacity:.6;font-weight:700}
+.wcube .empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted)}.wcube .empty svg{width:42px;height:42px;opacity:.5}
+.wback{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:800;background:none;border:0;color:var(--fg);padding:4px 0}.wback svg{width:22px;height:22px}
+[dir=rtl] .wback svg{transform:scaleX(-1)}`;document.head.appendChild(css);})();
+const W_ICON={Top:'top',Pants:'bottom',Skirt:'bottom',Outerwear:'outerwear',Shoes:'shoes',Accessory:'accessory'};
+function wItemsOf(c){return allItems().filter(i=>c==='Pants'?(i.cat==='Bottom'&&!isSkirt(i)):c==='Skirt'?isSkirt(i):i.cat===c);}
+function wLab(c){const v=t('w_'+c);return v==='w_'+c?window.W_EN['w_'+c]:v;}
+const _renderWardrobe115=renderWardrobe;renderWardrobe=function(){_renderWardrobe115.apply(this,arguments);if(wTab!=='items')return;
+  $('#wSeason').style.display='none';
+  if(wCat==='All'){$('#wFilters').style.display='none';
+    $('#wBody').innerHTML=`<div class="wcubes">${W_CHIPS.filter(c=>c!=='All').map(c=>{const its=wItemsOf(c);const four=its.slice(0,4);
+      const mos=four.length?`<div class="mos ${four.length===1?'one':four.length===2?'two':''}">${four.map(it=>`<i ${itemPh(it)}>${itemFace(it)}</i>`).join('')}</div>`:`<div class="empty">${ic(CATICON[c==='Pants'||c==='Skirt'?'Bottom':c]||W_ICON[c]||'top')}</div>`;
+      return `<button class="wcube" data-wc="${c}">${mos}<div class="lab"><b>${esc(wLab(c))}</b><span>${its.length}</span></div></button>`;}).join('')}</div>`;
+    $$('#wBody [data-wc]').forEach(b=>b.onclick=()=>{wCat=b.dataset.wc;renderWardrobe();$('#wBody').scrollTop=0;});}
+  else{$('#wFilters').style.display='flex';$('#wFilters').innerHTML=`<button class="wback" id="wBack">${SV('<path d="M15 5l-7 7 7 7"/>')}${esc(wLab(wCat))}</button>`;$('#wBack').onclick=()=>{wCat='All';renderWardrobe();};}};
