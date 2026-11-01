@@ -325,7 +325,7 @@ async function gumSafe(video){const md=navigator.mediaDevices;if(!md||!md.getUse
 async function rcMedia(video){RC.local=await gumSafe(video);CALL.stream=RC.local;return RC.local;}
 function rcPC(){const pc=new RTCPeerConnection({iceServers:ICE});RC.pc=pc;RC.remote=new MediaStream();
   pc.onicecandidate=e=>{if(e.candidate)rcSend(RC.peer,{t:'ice',c:e.candidate.toJSON?e.candidate.toJSON():e.candidate});};
-  pc.ontrack=e=>{e.streams[0]?e.streams[0].getTracks().forEach(tr=>{if(!RC.remote.getTracks().includes(tr))RC.remote.addTrack(tr);}):RC.remote.addTrack(e.track);if(e.track.kind==='video'&&!CALL.video){CALL.video=true;renderCall();}rcRemoteVideo();};
+  pc.ontrack=e=>{e.streams[0]?e.streams[0].getTracks().forEach(tr=>{if(!RC.remote.getTracks().includes(tr))RC.remote.addTrack(tr);}):RC.remote.addTrack(e.track);if(e.track.kind==='video'&&!CALL.video){CALL.video=true;renderCall();}rcRemoteVideo();if(e.track.kind==='audio'&&typeof vwStart==='function')vwStart(RC.remote);};
   pc.onconnectionstatechange=()=>{const s=pc.connectionState;if(s==='connected'&&!RC.connected){RC.connected=true;CALL.t0=Date.now();rcStatus('');clearTimeout(RC.timer);}
     if(s==='failed'){toast(t('Connection failed. Try again on Wi-Fi.'));rcHang(true);}if(s==='disconnected'){setTimeout(()=>{if(RC.pc===pc&&pc.connectionState==='disconnected')rcHang(true);},6000);}};
   RC.local.getTracks().forEach(tr=>pc.addTrack(tr,RC.local));return pc;}
@@ -365,7 +365,7 @@ function rcShowIncoming(p){const id=rid(p.from);const u=USERS[id]||{name:p.name|
     rcStatus(t('Connecting…'));rcPC();rcSend(p.from,{t:'accept'});};
   clearTimeout(RC.incT);RC.incT=setTimeout(()=>{if(d.classList.contains('on')){d.classList.remove('on');}},40000);}
 async function rcOnSig(p){if(!p||!p.from)return;
-  if(p.t==='invite'){if(RC.pc||!isFriend(rid(p.from))||S.blocked[rid(p.from)]){rcSend(p.from,{t:'decline',callId:p.callId});return;}RC.callId=p.callId;
+  if(p.t==='invite'){if(p.callId&&p.callId===RC.callId&&$('#inc').classList.contains('on'))return;if(RC.pc||!isFriend(rid(p.from))||S.blocked[rid(p.from)]){rcSend(p.from,{t:'decline',callId:p.callId});return;}RC.callId=p.callId;
     if(!USERS[rid(p.from)]){const {data}=await SB.from('profiles').select('*').eq('id',p.from).maybeSingle();if(data)addReal(data);}rcShowIncoming(p);return;}
   if(p.callId!==RC.callId)return;
   if(p.t==='end'){$('#inc').classList.remove('on');if(RC.pc)rcHang(false,true);return;}
@@ -450,3 +450,47 @@ rcShowIncoming=function(p){_rcShowIncoming(p);const d=$('#inc');const id=rid(p.f
   $('#incMsg').onclick=()=>{no&&no();show('chat');openRoom(id);};};
 (function(){const T={'Press the button and slide up':['Appuie sur le bouton et glisse vers le haut','לוחצים על הכפתור ומחליקים למעלה','اضغط على الزر واسحب للأعلى']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
 const _renderCall182=renderCall;renderCall=function(){_renderCall182();const c=$('#call');if(c.classList.contains('voice')&&!c.querySelector('.cwave'))c.insertAdjacentHTML('beforeend',`<div class="cwave">${Array.from({length:13},(_,i)=>`<i style="animation-delay:${(i*.09).toFixed(2)}s"></i>`).join('')}</div>`);};
+
+/* ====================== v18.3 waveform follows the real voice ====================== */
+(function(){const css=document.createElement('style');css.textContent=`#call .cwave i{animation:none!important;transform:scaleY(.12);transition:transform .08s linear}#call.demo .cwave i{animation:cw .9s ease-in-out infinite!important}`;document.head.appendChild(css);})();
+let VW={ctx:null,an:null,src:null,raf:0,stream:null};
+function vwStop(){cancelAnimationFrame(VW.raf);try{VW.src&&VW.src.disconnect();}catch(_){}VW.src=null;VW.stream=null;}
+function vwLoop(){const bars=$$('#call .cwave i');if(!bars.length||!VW.an){VW.raf=requestAnimationFrame(vwLoop);return;}
+  const d=new Uint8Array(VW.an.frequencyBinCount);VW.an.getByteFrequencyData(d);const n=bars.length,mid=(n-1)/2;
+  bars.forEach((b,i)=>{const band=Math.floor(2+Math.abs(i-mid)*2.2);const v=(d[band]||0)/255;const s=Math.max(.12,Math.min(1,v*1.6));b.style.transform=`scaleY(${s.toFixed(2)})`;});
+  VW.raf=requestAnimationFrame(vwLoop);}
+function vwStart(stream){if(!stream||!stream.getAudioTracks().length)return;if(VW.stream===stream&&VW.src)return;vwStop();
+  try{const A=window.AudioContext||window.webkitAudioContext;VW.ctx=VW.ctx||new A();if(VW.ctx.state==='suspended')VW.ctx.resume();
+    VW.an=VW.ctx.createAnalyser();VW.an.fftSize=64;VW.an.smoothingTimeConstant=.6;VW.src=VW.ctx.createMediaStreamSource(stream);VW.src.connect(VW.an);VW.stream=stream;vwLoop();}catch(_){}}
+const _renderCall183=renderCall;renderCall=function(){_renderCall183();const c=$('#call');c.classList.toggle('demo',!CALL.real);if(CALL.real&&RC.remote)vwStart(RC.remote);};
+const _rcHang183=rcHang;rcHang=function(){vwStop();return _rcHang183.apply(this,arguments);};
+
+/* ====================== v19: calls reach friends even when the app is closed (Web Push) ====================== */
+(function(){const T={'Get calls even when R-Style is closed':['Reçois les appels même quand R-Style est fermée','קבל שיחות גם כש-R-Style סגורה','تلقَّ المكالمات حتى عندما يكون R-Style مغلقًا'],
+ 'Turn on notifications':['Activer les notifications','הפעל התראות','تفعيل الإشعارات'],'Not now':['Plus tard','לא עכשיו','ليس الآن'],
+ 'On iPhone, first add R-Style to your home screen: tap Share (the square with an arrow) → “Add to Home Screen”, then open R-Style from the new icon.':['Sur iPhone, ajoute d’abord R-Style à l’écran d’accueil : touche Partager (le carré avec la flèche) → « Sur l’écran d’accueil », puis ouvre R-Style depuis la nouvelle icône.','באייפון, קודם מוסיפים את R-Style למסך הבית: לחץ על שיתוף (הריבוע עם החץ) ← "הוסף למסך הבית", ואז פתח את R-Style מהאייקון החדש.','على iPhone، أضف R-Style أولًا إلى الشاشة الرئيسية: اضغط مشاركة ← «إضافة إلى الشاشة الرئيسية»، ثم افتح R-Style من الأيقونة الجديدة.'],
+ 'Notifications are on ✅':['Notifications activées ✅','ההתראות הופעלו ✅','تم تفعيل الإشعارات ✅'],'is calling you':['t’appelle','מתקשר/ת אליך','يتصل بك']};
+ ['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
+const PUSH_FN='push';let SWREG=null;
+function b64u(s){const p='='.repeat((4-s.length%4)%4);const b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0));}
+async function swReady(){if(SWREG)return SWREG;if(!('serviceWorker' in navigator))return null;try{SWREG=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;}catch(_){SWREG=null;}return SWREG;}
+async function pushSubscribe(){const reg=await swReady();if(!reg||!reg.pushManager)return false;
+  const {data}=await SB.functions.invoke(PUSH_FN,{body:{action:'key'}});if(!data||!data.key)return false;
+  let sub=await reg.pushManager.getSubscription();if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(data.key)});
+  const j=sub.toJSON();await SB.from('push_subs').upsert({endpoint:j.endpoint,sub:j});S.pushOn=true;save();return true;}
+function isIOS(){return /iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);}
+function standalone(){return window.navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;}
+function askPush(force){if(!REAL||!SB||!ME_ID)return;const can='Notification' in window&&'PushManager' in window;
+  if(!force&&(S.pushAsked&&Date.now()-S.pushAsked<3*86400000))return;if(can&&Notification.permission==='granted'){pushSubscribe();return;}if(can&&Notification.permission==='denied'&&!force)return;
+  S.pushAsked=Date.now();save();
+  const needHome=isIOS()&&!standalone();
+  openSheet(`<h3>🔔 ${t('Get calls even when R-Style is closed')}</h3>${needHome?`<p class="muted" style="margin:8px 0 0;line-height:1.5">${t('On iPhone, first add R-Style to your home screen: tap Share (the square with an arrow) → “Add to Home Screen”, then open R-Style from the new icon.')}</p>`:
+    `<button class="btn primary" id="pushGo" style="margin-top:14px">${t('Turn on notifications')}</button>`}<button class="btn" id="pushNo" style="margin-top:8px">${t('Not now')}</button>`);
+  $('#pushNo').onclick=closeSheet;const g=$('#pushGo');if(g)g.onclick=async()=>{try{const r=await Notification.requestPermission();if(r==='granted'&&await pushSubscribe())toast(t('Notifications are on ✅'));}catch(_){}closeSheet();};}
+async function pushCall(u,video){try{await SB.functions.invoke(PUSH_FN,{body:{to:u,call:true,video,text:(me().username||'')+' '+t('is calling you')}});}catch(_){}}
+(function(){const _after=afterLogin;afterLogin=async function(){await _after();swReady();setTimeout(()=>askPush(false),4000);};})();
+/* the caller keeps ringing: invite again every 3 s (so a friend who opens the app from the notification still gets the call) */
+const _startCall19=startCall;startCall=async function(id,video){await _startCall19(id,video);if(!(RC.pc&&RC.role==='caller'&&RC.peer))return;const u=RC.peer,cid=RC.callId;pushCall(u,video);
+  clearInterval(RC.reinv);RC.reinv=setInterval(()=>{if(!RC.pc||RC.callId!==cid||RC.accepted||RC.connected){clearInterval(RC.reinv);return;}rcSend(u,{t:'invite',video,name:me().username});},3000);};
+const _rcOnSig19=rcOnSig;rcOnSig=async function(p){if(p&&p.t==='accept'&&p.callId===RC.callId){RC.accepted=true;clearInterval(RC.reinv);}if(p&&p.t==='decline'&&p.callId===RC.callId)clearInterval(RC.reinv);return _rcOnSig19(p);};
+const _rcHang19=rcHang;rcHang=function(){clearInterval(RC.reinv);RC.accepted=false;return _rcHang19.apply(this,arguments);};
