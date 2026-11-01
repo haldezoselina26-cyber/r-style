@@ -953,3 +953,16 @@ body.gold .cakeB svg{color:#D4AF37}
 #bdayFx .bconf i{position:absolute;top:-12px;width:8px;height:14px;border-radius:2px;animation:conf 2.6s linear infinite}
 @keyframes conf{to{transform:translateY(110vh) rotate(540deg)}}
 .ov-bday{top:2%;width:96%}
+
+/* v11.6 Gold light (white + gold) */
+body.gold.glight{--bg:#ffffff;--fg:#1A1407;--card:#FBF7EC;--card2:#F3EBD3;--muted:#8A7440;--line:#EADFC0;--glass:rgba(255,255,255,.78);--glassline:rgba(212,175,55,.5)}
+body.gold.glight #nav{border-color:#E2CF92}
+body.gold.glight #nav button.on,body.gold.glight #nav .npill{background:#F3EBD3;color:#A9851F}
+body.gold.glight .ogrid div i svg{color:rgba(0,0,0,.25)}
+body.gold.glight .rubyRow .av{background:#F3EBD3!important;color:#A9851F}
+body.gold.glight .composer.floating{background:rgba(255,255,255,.75)}
+body.gold.glight .composer.floating input,body.gold.glight .composer.floating .cb{color:#1A1407}
+body.gold.glight .composer.floating input::placeholder{color:#8A7440}
+body.gold.glight .mstat{background:rgba(255,255,255,.85);color:#8A7440}
+body.gold.glight .wcube .lab{background:rgba(255,255,255,.88);color:#1A1407}
+body.gold.glight .goldtxt{filter:saturate(1.2) brightness(.85)}

@@ -720,3 +720,138 @@ document.addEventListener('click',e=>{const b=e.target.closest('.acts .moreAct')
 function realUnread(){let n=0;for(const id in S.chats){if(!uuidOf(id)||S.blocked[id])continue;const a=S.chats[id]||[];const m=a[a.length-1];if(m&&m.f==='them'&&!m.read)n++;}return n;}
 function fixChatDot(){if(!(REAL&&ME_ID))return;const d=$('#chatDot');if(!d)return;const n=realUnread()+realReqs().length;d.hidden=!n;if(n)d.textContent='';}
 setInterval(fixChatDot,800);
+
+/* ====================== v25: real accounts only see real people ====================== */
+function purgeDemo(){if(!REAL)return;
+  Object.keys(USERS).forEach(k=>{if(!k.startsWith('r_'))delete USERS[k];});
+  if(typeof DIRECTORY==='object')Object.keys(DIRECTORY).forEach(k=>delete DIRECTORY[k]);
+  SAMPLE_SHORTS.length=0;Object.keys(STORIES).forEach(k=>{if(!k.startsWith('r_'))delete STORIES[k];});
+  ['following','likes'].forEach(f=>Object.keys(S[f]||{}).forEach(k=>{if(f==='following'&&!k.startsWith('r_'))delete S[f][k];}));
+  Object.keys(S.chats||{}).forEach(k=>{if(!k.startsWith('r_')&&!k.startsWith('G_'))delete S.chats[k];});
+  S.groups=(S.groups||[]).filter(g=>String(g.id).startsWith('G_'));S.requests=[];S.streaks={};S.seedFollow=true;S.adopted={};save();}
+purgeDemo();
+seedChats=function(){if(!REAL){Object.keys(USERS).forEach((id,k)=>{if(!S.chats[id])S.chats[id]=[{f:'them',t:['Hey! Loved your last look 🔥','Are you joining the contest?','That jacket 😍','Hi!','Send me your outfit for tonight','Thanks for the follow!'][k%6]}];});}
+  S.groups.forEach(g=>{if(!S.chats[g.id])S.chats[g.id]=[];});};
+if(REAL&&current&&S.profile){try{show(current);}catch(_){}}
+
+/* ---------- real counts on profiles ---------- */
+async function realCount(tbl,col,val){try{const r=await SB.from(tbl).select(col,{count:'exact',head:true}).eq(col==='id'?'author':col,val);return r.count??(r.data||[]).length;}catch(_){return null;}}
+const _renderMe25=renderMe;renderMe=function(){_renderMe25();if(!(REAL&&ME_ID))return;const st=$$('#meBody .meStats b');if(st.length<3)return;
+  st[0].textContent=REALPOSTS.filter(p=>p.mine).length||S.posts.length;st[1].textContent=fmt(Object.keys(S.realFans||{}).length);st[2].textContent=fmt(Object.keys(S.following).filter(k=>S.following[k]&&k.startsWith('r_')).length);
+  realCount('posts','id',ME_ID).then(n=>{if(n!=null&&st[0].isConnected)st[0].textContent=n;});};
+const _openProfile25=openProfile;openProfile=function(id){const u=uuidOf(id);if(!u||!USERS[id])return _openProfile25(id);
+  const tmp={id:'tmp_'+id,u:id,g:0,look:[''],likes:0};SAMPLE_SHORTS.push(tmp);try{_openProfile25(id);}finally{SAMPLE_SHORTS.splice(SAMPLE_SHORTS.indexOf(tmp),1);}
+  const posts=REALPOSTS.filter(p=>p.author===u);const grid=$('#profBody .vgrid');
+  if(grid)grid.innerHTML=posts.length?posts.map(p=>p.video?`<div data-pv="${p.id}" style="background:#111"><video src="${p.video}#t=0.1" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"></video><span>▶ ${fmt(p.likes+(S.likes[p.id]?1:0))}</span></div>`:`<div data-pv="${p.id}" style="background:#222 center/cover url(${p.img})"><span>♥ ${fmt(p.likes+(S.likes[p.id]?1:0))}</span></div>`).join(''):`<p class="muted" style="grid-column:1/-1;text-align:center;padding:30px">${t('No posts yet')}</p>`;
+  const st=$$('#profBody .stats b');if(st.length>=3){st[0].textContent=posts.length;st[1].textContent='…';st[2].textContent='…';
+    realCount('posts','id',u).then(n=>{if(n!=null)st[0].textContent=n;});realCount('follows','followee',u).then(n=>{st[1].textContent=n==null?'—':fmt(n);});realCount('follows','follower',u).then(n=>{st[2].textContent=n==null?'—':fmt(n);});}
+  const sc=$('#profBody .aiscore i');if(sc)sc.textContent='—';const bd=$('#profBody .badges');if(bd)bd.innerHTML='';};
+document.addEventListener('click',e=>{const b=e.target.closest('#profBody [data-pv]');if(!b)return;const i=feedList().findIndex(p=>p.id===b.dataset.pv);closeOverlay('profile');show('shorts');if(i>=0)setTimeout(()=>{const el=$$('#feed .short')[i];if(el)el.scrollIntoView();},150);});
+
+/* ====================== v26: wardrobe, looks, avatar and settings saved on the server ====================== */
+const UD_KEYS=['wardrobe','removed','fav','laundry','worn','saved','looks','avatar','day','accent','sound','notif','modest','modestAsked','chatTheme','chatOpt','pins','favChats','home','week','trend','vip','plan','trialEnd','paid','lang','weather'];
+let udT=null,udBusy=false,udReady=false;
+function udHash(s){let h=s.length;for(let i=0;i<s.length;i+=53)h=(h*31+s.charCodeAt(i))|0;return (h>>>0).toString(36)+s.length.toString(36);}
+async function udUpImg(o){const img=o&&o.img;if(!img||!String(img).startsWith('data:'))return o&&o.imgRef?o.imgRef:null;const h=udHash(img);if(o.imgRef&&o.imgH===h)return o.imgRef;
+  const path=`${ME_ID}/${h}.jpg`;const up=await SB.storage.from('closet').upload(path,dataUrlToBlob(img),{contentType:'image/jpeg'});
+  if(up.error&&!/exist|duplicate|409/i.test((up.error.message||'')+(up.error.statusCode||'')))throw up.error;o.imgRef=path;o.imgH=h;return path;}
+async function udPush(){if(!(REAL&&SB&&ME_ID&&udReady)||udBusy)return;udBusy=true;
+  try{const d={};UD_KEYS.forEach(k=>{if(S[k]!==undefined)d[k]=S[k];});
+    for(const k of ['wardrobe','looks']){d[k]=[];for(const o of (S[k]||[])){const ref=await udUpImg(o);const c=Object.assign({},o);delete c.img;delete c.imgH;c.imgRef=ref;d[k].push(c);}}
+    const p=Object.assign({},S.profile||{});delete p.photo;delete p.uid;delete p.email;d.profile=p;
+    const now=new Date().toISOString();const {error}=await SB.from('user_data').upsert({id:ME_ID,data:d,updated_at:now});if(!error){S.udAt=now;try{localStorage.setItem(KEY,JSON.stringify(S));}catch(_){}}}
+  catch(e){console.warn('udPush',e);}udBusy=false;}
+async function udImg(path){try{const {data}=await SB.storage.from('closet').download(path);if(!data)return null;return await new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.onerror=()=>r(null);f.readAsDataURL(data);});}catch(_){return null;}}
+async function udRestore(){if(!(REAL&&SB&&ME_ID))return;
+  try{const {data:row,error}=await SB.from('user_data').select('*').eq('id',ME_ID).maybeSingle();if(error){udReady=true;return;}
+    if(row&&row.data&&(!S.udAt||Date.parse(row.updated_at)>Date.parse(S.udAt)+1000)){const d=row.data;
+      for(const k of ['wardrobe','looks'])if(Array.isArray(d[k])){for(const o of d[k]){if(o.imgRef){o.img=await udImg(o.imgRef);if(o.img)o.imgH=udHash(o.img);}}d[k]=d[k].filter(o=>o.img||k==='wardrobe');}
+      UD_KEYS.forEach(k=>{if(d[k]!==undefined)S[k]=d[k];});
+      if(d.profile&&S.profile){const keep={username:S.profile.username,uid:S.profile.uid,email:S.profile.email,photo:S.profile.photo};S.profile=Object.assign({},S.profile,d.profile,keep);}
+      S.udAt=row.updated_at;S.today=null;try{localStorage.setItem(KEY,JSON.stringify(S));}catch(_){}
+      applyTheme();applyLang();if(current&&!['lang','signup','splash'].includes(current))show(current);}
+    udReady=true;if(!row)udPush();}catch(e){udReady=true;}}
+const _save26=save;save=function(){_save26();if(REAL&&ME_ID&&udReady){clearTimeout(udT);udT=setTimeout(udPush,6000);}};
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&udT){clearTimeout(udT);udT=null;udPush();}});
+
+/* ====================== v27: real group chats ====================== */
+let GCH=null;
+const gid=id=>String(id).startsWith('G_')?id.slice(2):null;
+function gToLocal(m){const mine=m.sender===ME_ID;const x={f:m.kind==='sys'?'sys':mine?'me':'them',by:mine?undefined:rid(m.sender),ts:Date.parse(m.created_at),dbid:m.id,st:mine?'delivered':undefined,read:mine};
+  const k=m.kind||'text';if(k==='text'||k==='sys')x.t=m.body;else if(k==='voice'){x.voice=1;x.dur=m.body||'0:05';x.media=m.media;}else if(k==='video'){x.isVid=1;x.vid='';x.dur=m.body||'';x.media=m.media;}else{x.media=m.media;x.img='';x.filter=m.body;}return x;}
+async function gSign(list){const need=list.filter(x=>x.media&&!x.url);if(!need.length)return;const {data}=await SB.storage.from('groups').createSignedUrls(need.map(x=>x.media),3600*6);
+  (data||[]).forEach((d,i)=>{const x=need[i];if(d&&d.signedUrl){x.url=d.signedUrl;if(x.voice)x.a=d.signedUrl;else if(x.isVid)x.vid=d.signedUrl;else x.img=d.signedUrl;}});}
+async function gLoad(){if(!(REAL&&SB&&ME_ID))return;
+  try{const {data:mm,error}=await SB.from('group_members').select('group_id').eq('member',ME_ID);if(error)return;const ids=(mm||[]).map(x=>x.group_id);
+    const keep=S.groups.filter(g=>!String(g.id).startsWith('G_'));if(!ids.length){S.groups=keep;save();return;}
+    const [{data:gs},{data:mem},{data:msgs}]=await Promise.all([SB.from('groups').select('*').in('id',ids),SB.from('group_members').select('*').in('group_id',ids),SB.from('group_messages').select('*').in('group_id',ids).order('created_at',{ascending:true}).limit(1500)]);
+    await gcEnsure([...new Set((mem||[]).map(x=>x.member).filter(u=>u!==ME_ID))]);
+    S.groups=[...keep,...(gs||[]).map(g=>({id:'G_'+g.id,name:g.name,owner:g.owner,members:(mem||[]).filter(x=>x.group_id===g.id&&x.member!==ME_ID).map(x=>rid(x.member)),real:true}))];
+    const by={};(msgs||[]).forEach(m=>{(by['G_'+m.group_id]=by['G_'+m.group_id]||[]).push(gToLocal(m));});
+    for(const g of S.groups){if(!g.real)continue;const old=S.chats[g.id]||[];const fresh=by[g.id]||[];old.forEach(o=>{const f=fresh.find(x=>x.dbid===o.dbid);if(f&&o.read)f.read=true;});
+      const pend=old.filter(o=>!o.dbid&&o.f==='me');S.chats[g.id]=[...fresh,...pend];}
+    try{await gSign(Object.values(by).flat());}catch(_){}save();gListen();if(current==='chat')renderChatList();else if(current==='room'&&gid(roomId))renderMsgs();}catch(e){console.warn('gLoad',e);}}
+function gListen(){if(GCH)SB.removeChannel(GCH);
+  GCH=SB.channel('groups-'+ME_ID)
+   .on('postgres_changes',{event:'INSERT',schema:'public',table:'group_messages'},async p=>{const m=p.new;if(m.sender===ME_ID)return;const id='G_'+m.group_id;if(!S.groups.some(g=>g.id===id)){gLoad();return;}
+      const a=S.chats[id]=S.chats[id]||[];if(a.some(x=>x.dbid===m.id))return;await gcEnsure([m.sender]);const here=current==='room'&&roomId===id;const loc=Object.assign(gToLocal(m),{read:here});try{await gSign([loc]);}catch(_){}a.push(loc);save();
+      if(here)renderMsgs();else if(current==='chat')renderChatList();fixChatDot();if(navigator.vibrate)try{navigator.vibrate(15);}catch(_){}})
+   .on('postgres_changes',{event:'INSERT',schema:'public',table:'group_members',filter:`member=eq.${ME_ID}`},()=>gLoad())
+   .subscribe();}
+function gSend(id,m){const g=gid(id);m.ts=Date.now();m.st='sent';(S.chats[id]=S.chats[id]||[]).push(m);save();
+  if(current==='room'&&roomId===id){renderMsgs();try{flyLast();burstSend();pop();}catch(_){}}
+  (async()=>{let row={group_id:g,kind:'text',body:m.t};
+    if(m.vid&&m.vidBlob){const blob=m.vidBlob;if(blob.size>50*1024*1024)return {error:{code:'big'}};const ext=/mp4|quicktime/.test(blob.type)?'mp4':'webm';const path=`${g}/${ME_ID}/${Date.now()}.${ext}`;
+      const up=await SB.storage.from('groups').upload(path,blob,{contentType:blob.type||'video/mp4'});if(up.error)return {error:up.error};m.media=path;delete m.vidBlob;row={group_id:g,kind:'video',media:path,body:m.dur||null};}
+    else if(m.img||m.a){const blob=dataUrlToBlob(m.img||m.a);const ext=m.a?((blob.type.includes('mp4')||blob.type.includes('aac'))?'m4a':'webm'):'jpg';const path=`${g}/${ME_ID}/${Date.now()}.${ext}`;
+      const up=await SB.storage.from('groups').upload(path,blob,{contentType:blob.type||'application/octet-stream'});if(up.error)return {error:up.error};m.media=path;row=m.a?{group_id:g,kind:'voice',media:path,body:m.dur||null}:{group_id:g,kind:'image',media:path,body:m.filter||null};}
+    else if(!m.t)return {error:{code:'empty'}};
+    return SB.from('group_messages').insert(row).select().single();})().then(({data,error})=>{
+    if(error){m.failed=true;toast(error.code==='big'?t('This video is too big (max 50 MB).'):t('Not sent. Check your internet.'));}
+    else{m.dbid=data.id;m.st='delivered';const gr=S.groups.find(x=>x.id===id);const prev=m.t||(m.vid?'🎬 '+t('Video message'):m.a?'🎙️ '+t('Voice message'):'📷 '+t('Photo'));
+      if(gr)gr.members.forEach(u=>{const uu=uuidOf(u);if(uu)pushText(uu,(gr.name+': '+prev));});}
+    save();if(current==='room'&&roomId===id)renderMsgs();});}
+PUSHW.unshift(function(){const _p=pushMsg;pushMsg=function(id,m){if(gid(id)&&m&&m.f==='me')return gSend(id,m);return _p.apply(this,arguments);};});
+function realFriends(){return Object.keys(USERS).filter(u=>u.startsWith('r_')&&!S.blocked[u]&&S.following[u]&&(S.realFans||{})[u]);}
+async function gCreate(name,members){const {data:g,error}=await SB.from('groups').insert({name}).select().single();if(error||!g){toast(t('Not sent. Check your internet.'));return null;}
+  const {error:e1}=await SB.from('group_members').insert({group_id:g.id,member:ME_ID});if(e1){toast(t('Not sent. Check your internet.'));return null;}
+  await SB.from('group_members').insert(members.map(u=>({group_id:g.id,member:uuidOf(u)})));
+  await SB.from('group_messages').insert({group_id:g.id,kind:'sys',body:t('{n} created the group',{n:'@'+me().username})});
+  await gLoad();return 'G_'+g.id;}
+document.addEventListener('click',e=>{if(!(REAL&&ME_ID&&SB))return;if(!e.target.closest('#newGroup'))return;e.stopImmediatePropagation();e.preventDefault();
+  const fr=realFriends();const sel=new Set();
+  if(!fr.length){openSheet(`<h3>👥 ${t('New group')}</h3><p class="muted" style="text-align:center;padding:16px 0">${t('Add friends first: a group is only with friends who follow you back.')}</p>`);return;}
+  openSheet(`<h3>👥 ${t('New group')}</h3><input class="field" id="gName" maxlength="40" placeholder="${t('Group name')}" style="height:48px;font-size:15px;margin:10px 0"><div>${fr.map(u=>`<button class="pick" data-gm="${u}">${avHTML(u,42)}<b>${esc(USERS[u].name)}</b><span class="check"></span></button>`).join('')}</div><button class="btn primary" id="gGo" style="margin-top:12px">${t('Create group')}</button>`);
+  $('#sheet').querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{const u=b.dataset.gm;sel.has(u)?sel.delete(u):sel.add(u);const c=b.querySelector('.check');c.classList.toggle('on',sel.has(u));c.textContent=sel.has(u)?'✓':'';});
+  $('#gGo').onclick=async()=>{const name=$('#gName').value.trim();if(!name||sel.size<1){toast(t('Add a name and at least 1 friend'));return;}if(sel.size>30){toast(t('Max 30 people'));return;}
+    $('#gGo').disabled=true;const id=await gCreate(name,[...sel]);closeSheet();if(id)openRoom(id);};},true);
+async function gLeave(id){const g=gid(id);if(!g)return;await SB.from('group_members').delete().eq('group_id',g).eq('member',ME_ID);S.groups=S.groups.filter(x=>x.id!==id);delete S.chats[id];save();try{closeRoom();}catch(_){}show('chat');toast(t('You left the group'));}
+const _realUnread27=realUnread;realUnread=function(){let n=_realUnread27();for(const id in S.chats){if(!gid(id))continue;const a=S.chats[id]||[];const m=a[a.length-1];if(m&&m.f==='them'&&!m.read)n++;}return n;};
+const _afterLogin25=afterLogin;afterLogin=async function(){await _afterLogin25();udRestore();gLoad();i18nAfterLogin();};
+
+/* ====================== v28: every language, translated once by Ruby and shared ====================== */
+async function i18nFetch(c){if(!SB||c==='en')return 0;let n=0;window.I18N[c]=window.I18N[c]||{};
+  try{for(let from=0;from<6000;from+=1000){const {data,error}=await SB.from('i18n').select('k,v').eq('lang',c).range(from,from+999);if(error||!data)break;data.forEach(r=>{if(!(r.k in window.I18N[c])){window.I18N[c][r.k]=r.v;n++;}});if(data.length<1000)break;}
+    if(n)try{localStorage.setItem('rstyle_i18n_'+c,JSON.stringify(window.I18N[c]));}catch(_){}}catch(_){}return n;}
+const _translateKeys28=translateKeys;translateKeys=async function(c,keys,onProgress,par){const before=new Set(Object.keys(window.I18N[c]||{}));await _translateKeys28(c,keys,onProgress,par);
+  if(!(SB&&ME_ID))return;const rows=keys.filter(k=>!before.has(k)&&window.I18N[c][k]).map(k=>({lang:c,k,v:window.I18N[c][k]}));
+  for(let i=0;i<rows.length;i+=200)try{await SB.from('i18n').upsert(rows.slice(i,i+200),{onConflict:'lang,k',ignoreDuplicates:true});}catch(_){}};
+setLanguage=async function(c){
+  if(c!=='en'&&!langComplete(c)){loadCachedLang(c);
+    if(!langComplete(c)){for(let i=0;i<15&&!SB&&REAL;i++)await new Promise(r=>setTimeout(r,200));await i18nFetch(c);}
+    if(!langComplete(c)&&AI){const ok=await translateTo(c);if(ok==='cancel')return false;}}
+  S.lang=c;save();applyLang();if(current&&!['lang','signup'].includes(current))show(current);return true;};
+async function i18nAfterLogin(){const c=S.lang;if(!c||c==='en'||langComplete(c))return;await i18nFetch(c);applyLang();
+  if(!langComplete(c)){for(let i=0;i<20&&!(AI&&AI.gemini);i++)await new Promise(r=>setTimeout(r,500));if(AI)translateTo(c);}
+  else if(current&&!['lang','signup'].includes(current))show(current);}
+(async()=>{if(!REAL||!S.lang||S.lang==='en'||langComplete(S.lang))return;for(let i=0;i<25&&!SB;i++)await new Promise(r=>setTimeout(r,200));if(await i18nFetch(S.lang)){applyLang();if(current&&!['lang','signup'].includes(current))show(current);}})();
+(function(){const T={'No posts yet':['Pas encore de posts','עדיין אין פוסטים','لا توجد منشورات بعد'],
+ 'Add friends first: a group is only with friends who follow you back.':['Ajoute d\'abord des amis : un groupe, c\'est seulement avec des amis qui te suivent aussi.','קודם תוסיף חברים: קבוצה היא רק עם חברים שעוקבים גם אחריך.','أضف أصدقاء أولاً: المجموعة فقط مع أصدقاء يتابعونك أيضاً.'],
+ 'Add a name and at least 1 friend':['Ajoute un nom et au moins 1 ami','תוסיף שם ולפחות חבר אחד','أضف اسماً وصديقاً واحداً على الأقل'],
+ 'Max 30 people':['30 personnes maximum','מקסימום 30 אנשים','30 شخصاً كحد أقصى'],'You left the group':['Tu as quitté le groupe','יצאת מהקבוצה','غادرت المجموعة'],'Leave group':['Quitter le groupe','לצאת מהקבוצה','مغادرة المجموعة']};
+ ['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
+const _openContact27=openContact;openContact=function(id){_openContact27(id);if(!gid(id))return;const d=$('#ciBody .ciCard.danger');if(d&&!d.querySelector('[data-gleave]'))d.insertAdjacentHTML('beforeend',ciRow('export',t('Leave group'),'','data-gleave="1"'));
+  const g=S.groups.find(x=>x.id===id);const top=$('#ciBody .ciTop small');if(g&&top)top.textContent=[me().username,...g.members.map(u=>USERS[u]?.name||'')].filter(Boolean).join(', ');};
+document.addEventListener('click',e=>{if(!e.target.closest('[data-gleave]'))return;e.stopPropagation();const id=ciId;closeOverlay('cinfo');gLeave(id);},true);
+const _avHTML25=avHTML;avHTML=function(u,size){if(u!=='me'&&!USERS[u])return `<span class="av" style="width:${size}px;height:${size}px;font-size:${Math.round(size*.36)}px;background:#555">?</span>`;return _avHTML25(u,size);};
+const _renderChallenge25=renderChallenge;renderChallenge=function(){if(REAL){const b=$('#challenge');if(b)b.innerHTML='';return;}return _renderChallenge25();};

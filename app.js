@@ -124,7 +124,7 @@ function applyLang(){
   $('#vipNote').textContent=t('Then {p}. Cancel anytime. Payment via Apple (demo).',{p:S.plan==='year'?t('100 ₪/year'):t('10 ₪/month')});
 }
 function isLight(){if(S.day!==null&&S.day!==undefined)return S.day;const p=me();if(p.gender==='woman')return true;if(p.gender==='man')return false;if(p.theme)return p.theme==='light';return false;}
-function applyTheme(){document.body.classList.toggle('light',!S.vip&&isLight());document.body.classList.toggle('gold',!!S.vip);document.documentElement.style.setProperty('--accent',S.vip?(S.accent||'#D4AF37'):'#E11D2E');renderLogo();}
+function applyTheme(){document.body.classList.toggle('light',!S.vip&&isLight());document.body.classList.toggle('gold',!!S.vip);document.body.classList.toggle('glight',!!S.vip&&isLight());document.documentElement.style.setProperty('--accent',S.vip?(S.accent||'#D4AF37'):'#E11D2E');renderLogo();}
 function renderLogo(){const l=$('#homeLogo');if(l)l.innerHTML=S.vip?'<span class="goldtxt">Gold Style</span>':'R<b>·</b>Style';}
 function trialCheck(){if(S.vip&&S.trialEnd&&Date.now()>S.trialEnd&&!S.paid){/* demo: trial converts to paid */S.paid=true;save();}}
 
@@ -618,7 +618,7 @@ function renderSettings(){
   ${S.vip?`<button class="srow" id="perksBtn"><div class="l"><b class="goldtxt" style="font-size:17px">👑 Gold Style</b><small class="muted">${t('See all your Gold benefits')}</small></div><span>›</span></button>`:''}
   <div class="srow"><div class="l"><b>${S.vip?'👑 '+t('VIP active'):t('Free plan')}</b><small class="muted">${S.vip?(S.trialEnd>Date.now()?t('Free trial until {d}',{d:new Date(S.trialEnd).toLocaleDateString()}):(S.plan==='year'?t('100 ₪/year'):t('10 ₪/month'))):t('7 days free, then 10 ₪/month')}</small></div>${S.vip?`<button class="chip" id="vipOff">${t('Cancel')}</button>`:`<button class="chip on" id="vipGo">${t('Try free')}</button>`}</div>
   <div class="sect">${t('Appearance')}</div>
-  ${S.vip?'':`<div class="srow"><div class="l"><b>${t('Day Mode')}</b><small class="muted">${t('Light theme for the whole app')}</small></div>${tog('tgDay',light,false)}</div>`}
+  <div class="srow"><div class="l"><b>${t('Day Mode')}</b><small class="muted">${t('Light theme for the whole app')}</small></div>${tog('tgDay',light,false)}</div>
   <div class="srow" style="flex-direction:column;align-items:flex-start"><div class="l"><b>🎨 ${t('Accent color')} ${S.vip?'':'👑'}</b></div><div class="colors">${ACCENTS.map(c=>`<button data-ac="${c}" class="${(S.vip?S.accent:'#E11D2E')===c?'on':''}" style="background:${c}"></button>`).join('')}</div></div>
   <div class="srow"><div class="l"><b>🔊 ${t('Button sounds')}</b></div>${tog('tgSound',S.sound)}</div>
   <div class="sect">${t('Notifications')}</div>
