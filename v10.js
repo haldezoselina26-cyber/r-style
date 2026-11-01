@@ -315,7 +315,13 @@ function rcRemoteVideo(){const st=$('#call .remote,#call .voiceAv');if(!RC.remot
   if(CALL.video){let v=$('#call video.rv');if(!v&&st){st.insertAdjacentHTML('afterbegin','<video class="rv" autoplay playsinline></video>');v=$('#call video.rv');}if(v&&v.srcObject!==RC.remote){v.srcObject=RC.remote;v.play().catch(()=>{});}}
   let a=$('#rcAudio');if(!a){a=document.createElement('audio');a.id='rcAudio';a.autoplay=true;a.setAttribute('playsinline','');document.body.appendChild(a);}if(a.srcObject!==RC.remote){a.srcObject=RC.remote;a.play().catch(()=>{});}
   if(CALL.video){const v=$('#call video.rv');if(v)v.muted=true;}}
-async function rcMedia(video){RC.local=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:video?{facingMode:'user',width:{ideal:640},height:{ideal:960}}:false});CALL.stream=RC.local;return RC.local;}
+async function gumSafe(video){const md=navigator.mediaDevices;if(!md||!md.getUserMedia)throw new Error('NoMedia');
+  try{if(SNAP&&SNAP.stream){SNAP.stream.getTracks().forEach(x=>x.stop());SNAP.stream=null;}}catch(_){}
+  try{return await md.getUserMedia({audio:true,video:video?{facingMode:'user'}:false});}
+  catch(e1){/* some iPads refuse camera+mic together: ask one by one and join them */
+    const a=await md.getUserMedia({audio:true});if(!video)return a;
+    try{const v=await md.getUserMedia({video:{facingMode:'user'}});v.getVideoTracks().forEach(tr=>a.addTrack(tr));}catch(e2){CALL.video=false;}return a;}}
+async function rcMedia(video){RC.local=await gumSafe(video);CALL.stream=RC.local;return RC.local;}
 function rcPC(){const pc=new RTCPeerConnection({iceServers:ICE});RC.pc=pc;RC.remote=new MediaStream();
   pc.onicecandidate=e=>{if(e.candidate)rcSend(RC.peer,{t:'ice',c:e.candidate.toJSON?e.candidate.toJSON():e.candidate});};
   pc.ontrack=e=>{e.streams[0]?e.streams[0].getTracks().forEach(tr=>{if(!RC.remote.getTracks().includes(tr))RC.remote.addTrack(tr);}):RC.remote.addTrack(e.track);if(e.track.kind==='video'&&!CALL.video){CALL.video=true;renderCall();}rcRemoteVideo();};
@@ -333,7 +339,7 @@ async function rcOffer(){const o=await RC.pc.createOffer();await RC.pc.setLocalD
 function askPerm(video,onOk,onNo){let tries=0;openSheet(`<h3>🎙️${video?' 📷':''} ${t('Allow camera and microphone')}</h3><p class="muted" style="margin:6px 0 0">${t('R-Style needs your microphone (and camera for video) to call your friends.')}</p>
   <button class="btn primary" id="permGo" style="margin-top:14px">${t('Allow camera and microphone')}</button><p class="muted" id="permHelp" style="display:none;margin:12px 0 0;font-size:13px;line-height:1.5"></p><button class="btn" id="permNo" style="margin-top:8px">${t('Cancel')}</button>`);
   $('#permNo').onclick=()=>{closeSheet();onNo&&onNo();};
-  $('#permGo').onclick=async()=>{tries++;try{const st=await navigator.mediaDevices.getUserMedia({audio:true,video:!!video});st.getTracks().forEach(x=>x.stop());closeSheet();onOk();}
+  $('#permGo').onclick=async()=>{tries++;try{const st=await gumSafe(!!video);st.getTracks().forEach(x=>x.stop());closeSheet();onOk();}
     catch(err){const h=$('#permHelp');if(h){h.style.display='block';h.textContent=t('Still blocked? In Safari tap “aA” next to the address → Website Settings → Camera and Microphone → Allow. Then come back and tap the button again.')+' ('+((err&&err.name)||'error')+')';}}};}
 /* outgoing */
 const _startCall18=startCall;
