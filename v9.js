@@ -1112,3 +1112,19 @@ ICONS.home='<path d="M3 11.2 12 3.6l9 7.6"/><path d="M5.2 9.6V20.4h13.6V9.6"/><p
 
 /* v11.3 avatar v5: Gold gets the high-detail version */
 (function(){const _a=avCfg;avCfg=function(){const c=_a();c.gold=!!S.vip;return c;};})();
+
+/* v11.4 wardrobe opens on the clothes: T-shirt · Pantalon · Jupe · Veste · Chaussures · Accessoires, avatar is the second tab */
+(function(){const T={'w_All':['Tout','הכל','الكل'],'w_Top':['T-shirts','חולצות','قمصان'],'w_Pants':['Pantalons','מכנסיים','بناطيل'],'w_Skirt':['Jupes','חצאיות','تنانير'],'w_Outerwear':['Vestes','ז׳קטים','جاكيتات'],'w_Shoes':['Chaussures','נעליים','أحذية'],'w_Accessory':['Accessoires','אקססוריז','إكسسوارات']};
+ const EN={'w_All':'All','w_Top':'T-shirts','w_Pants':'Pants','w_Skirt':'Skirts','w_Outerwear':'Jackets','w_Shoes':'Shoes','w_Accessory':'Accessories'};
+ ['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});window.W_EN=EN;
+ const tabs=document.querySelector('.segTabs');if(tabs){const it=tabs.querySelector('[data-wt="items"]'),av=tabs.querySelector('[data-wt="avatar"]'),of=tabs.querySelector('[data-wt="outfits"]');if(it&&av)tabs.insertBefore(it,av);if(of)of.style.display='none';
+   tabs.querySelectorAll('[data-wt]').forEach(b=>b.classList.toggle('on',b.dataset.wt==='items'));}
+ wTab='items';})();
+const W_CHIPS=['All','Top','Pants','Skirt','Outerwear','Shoes','Accessory'];
+const isSkirt=i=>i.cat==='Bottom'&&(/skirt|jupe|חצאית|تنورة/i.test((i.name||'')+' '+(i.sub||'')+' '+(i.type||'')));
+const _renderWardrobe114=renderWardrobe;renderWardrobe=function(){const want=wCat;const special=want==='Pants'||want==='Skirt';if(special)wCat='Bottom';
+  try{_renderWardrobe114.apply(this,arguments);}finally{wCat=want;}
+  if(wTab!=='items')return;
+  $('#wFilters').innerHTML=W_CHIPS.map(c=>`<button class="chip ${c===wCat?'on':''}" data-f="${c}">${(v=>v==='w_'+c?window.W_EN['w_'+c]:v)(t('w_'+c))}</button>`).join('');
+  if(special)$$('#wBody .item[data-item]').forEach(el=>{const it=findItem(el.dataset.item);if(!it)return;if((want==='Skirt')!==isSkirt(it))el.remove();});
+  if(special&&!$('#wBody .item'))$('#wBody').innerHTML=`<p class="muted" style="text-align:center;margin-top:40px">${t('Nothing here yet. Tap ＋ to scan clothes.')}</p>`;};
