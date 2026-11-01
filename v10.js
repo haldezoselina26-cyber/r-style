@@ -2,7 +2,7 @@
 /* ====================== v10: real server (Supabase) — only on the real website ====================== */
 const SB_URL='https://gnctjjexhzeavxnpbckm.supabase.co',SB_KEY='sb_publishable_kQ6kHtZNjnyFpjonIuwABg_IYeH4qQW';
 let SB=null,ME_ID=null,SBchan=null;
-const REAL=/github\.io$/.test(location.hostname);
+const REAL=/github\.io$/.test(location.hostname)||!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
 (function(){const T={
  'Sending…':['Envoi…','שולח…','جارٍ الإرسال…'],
  'Check your mailbox (and spam). The code can take 1 minute.':['Regarde tes mails (et les spams). Le code peut prendre 1 minute.','תבדוק את המייל (וגם בספאם). הקוד יכול לקחת דקה.','تحقق من بريدك (والرسائل غير المرغوبة). قد يستغرق الرمز دقيقة.'],

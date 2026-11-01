@@ -1,0 +1,16 @@
+{
+  "appId": "app.rstyle.ios",
+  "appName": "R-Style",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#0B0B0D",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "server": {
+    "iosScheme": "capacitor"
+  },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 0, "backgroundColor": "#000000" }
+  }
+}

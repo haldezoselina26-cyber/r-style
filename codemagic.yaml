@@ -1,0 +1,40 @@
+# Builds the R-Style iPhone app in the cloud (Codemagic, Mac included) and sends it to TestFlight.
+# Needs (with dad): an Apple Developer account + an App Store Connect API key added in Codemagic
+# as the integration named "RStyle ASC", and the app "R-Style" (bundle id app.rstyle.ios) created in App Store Connect.
+workflows:
+  ios-testflight:
+    name: R-Style iOS → TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: RStyle ASC
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: app.rstyle.ios
+      node: 20
+      xcode: latest
+    scripts:
+      - name: Install
+        script: npm install
+      - name: Web files
+        script: npm run build
+      - name: iOS project
+        script: |
+          [ -d ios ] || npx cap add ios
+          npx cap sync ios
+          sh scripts/ios-plist.sh
+      - name: Signing
+        script: xcode-project use-profiles
+      - name: Version number
+        script: |
+          cd ios/App
+          agvtool new-version -all $(($BUILD_NUMBER + 1))
+      - name: Build
+        script: xcode-project build-ipa --project "ios/App/App.xcodeproj" --scheme "App"
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
