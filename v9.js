@@ -1062,14 +1062,21 @@ const _renderSnap109=renderSnap;renderSnap=function(){_renderSnap109();const s=$
  el.innerHTML='<i class="beam"></i><i class="beam"></i><i class="beam"></i><i class="beam"></i><div class="flash"></div><div class="wrap" dir="ltr"><span class="r">R</span><span class="rest"><span>-STYLE</span></span></div><div class="tagline">STYLE · AI · FRIENDS</div><div class="tap">'+({he:'לחצו כדי להיכנס',fr:'Touche pour entrer',ar:'اضغط للدخول'}[(()=>{try{return JSON.parse(localStorage.getItem('rstyle_v3')||'{}').lang}catch(_){return ''}})()]||'Tap to enter')+'</div>';
  document.body.appendChild(el);
  /* original sound: deep "boom" + bright rising chord (made with Web Audio, no music files) */
- let played=false;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(_){}const A=window.AudioContext||window.webkitAudioContext;let c=null;try{c=A?new A():null;}catch(_){}
- function sound(){if(played||!c)return;try{if(c.state==='suspended')c.resume();const t=c.currentTime+.05;played=true;
-   const master=c.createGain();master.gain.value=.55;master.connect(c.destination);
+ let played=false;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(_){}
+ /* the sound is drawn into a small WAV file first, then played with a normal <audio> (works on iPhone, even in silent mode) */
+ function design(c,t){const master=c.createGain();master.gain.value=.55;master.connect(c.destination);
    const boom=c.createOscillator(),bg=c.createGain();boom.type='sine';boom.frequency.setValueAtTime(110,t);boom.frequency.exponentialRampToValueAtTime(38,t+.9);bg.gain.setValueAtTime(0,t);bg.gain.linearRampToValueAtTime(1,t+.02);bg.gain.exponentialRampToValueAtTime(.001,t+1.4);boom.connect(bg).connect(master);boom.start(t);boom.stop(t+1.5);
-   const n=c.createBufferSource(),buf=c.createBuffer(1,c.sampleRate*.4,c.sampleRate),d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);n.buffer=buf;const nf=c.createBiquadFilter();nf.type='lowpass';nf.frequency.value=900;const ng=c.createGain();ng.gain.value=.5;n.connect(nf).connect(ng).connect(master);n.start(t);
-   [[293.66,1.0],[440,1.06],[587.33,1.12],[880,1.2]].forEach(([f,dl])=>{const o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(0,t+dl);g.gain.linearRampToValueAtTime(.18,t+dl+.04);g.gain.exponentialRampToValueAtTime(.001,t+dl+1.6);o.connect(g).connect(master);o.start(t+dl);o.stop(t+dl+1.7);});
-   setTimeout(()=>{try{c.close();}catch(_){}},3500);}catch(_){}}
+   const n=c.createBufferSource(),buf=c.createBuffer(1,Math.floor(c.sampleRate*.4),c.sampleRate),d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);n.buffer=buf;const nf=c.createBiquadFilter();nf.type='lowpass';nf.frequency.value=900;const ng=c.createGain();ng.gain.value=.5;n.connect(nf).connect(ng).connect(master);n.start(t);
+   [[293.66,1.0],[440,1.06],[587.33,1.12],[880,1.2]].forEach(([f,dl])=>{const o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(0,t+dl);g.gain.linearRampToValueAtTime(.18,t+dl+.04);g.gain.exponentialRampToValueAtTime(.001,t+dl+1.6);o.connect(g).connect(master);o.start(t+dl);o.stop(t+dl+1.7);});}
+ function toWav(ab){const ch=ab.getChannelData(0),sr=ab.sampleRate,len=ch.length,buf=new ArrayBuffer(44+len*2),v=new DataView(buf);const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+   w(0,'RIFF');v.setUint32(4,36+len*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,len*2,true);
+   for(let i=0;i<len;i++){const x=Math.max(-1,Math.min(1,ch[i]));v.setInt16(44+i*2,x*32767,true);}return new Blob([buf],{type:'audio/wav'});}
+ const audio=new Audio();window.__rsAudio=audio;audio.preload='auto';audio.setAttribute('playsinline','');
+ try{const O=window.OfflineAudioContext||window.webkitOfflineAudioContext;const oc=new O(1,22050*3,22050);design(oc,0.02);const pr=oc.startRendering();
+   const fin=ab=>{audio.src=URL.createObjectURL(toWav(ab));audio.load();};if(pr&&pr.then)pr.then(fin);else oc.oncomplete=e=>fin(e.renderedBuffer);}catch(_){}
+ function sound(){if(played)return;played=true;try{const p=audio.play();if(p&&p.catch)p.catch(()=>{});}catch(_){}}
  let done=false;const finish=()=>{if(done)return;done=true;el.classList.add('out');setTimeout(()=>el.remove(),500);};
  const go=()=>{el.classList.remove('wait');sound();setTimeout(finish,2900);};
- if(c&&c.state==='running')go();else{el.classList.add('wait');}
- el.addEventListener('pointerdown',()=>{if(el.classList.contains('wait'))go();else finish();});})();
+ const native=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+ if(native)setTimeout(go,300);else el.classList.add('wait');
+ el.addEventListener('click',()=>{if(el.classList.contains('wait'))go();else finish();});})();
