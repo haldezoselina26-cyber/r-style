@@ -1147,7 +1147,7 @@ function renderMsgs(){const box=$('#msgs');box.innerHTML=`<div class="daytag">${
     else d.insertAdjacentHTML('beforeend',esc(m.t));
     if(m.rx&&m.rx.length)d.insertAdjacentHTML('beforeend',`<span class="rx">${m.rx.map(x=>SV(ICONS[x])).join('')}</span>`);
     box.appendChild(d);});box.scrollTop=box.scrollHeight;}
-(function(){let lt=0,lk=null,hold=null;const box=$('#msgs');
+(function(){return;let lt=0,lk=null,hold=null;const box=$('#msgs');
   const open=k=>{const m=S.chats[roomId][k];if(!m||m.f==='sys')return;
     openSheet(`<h3>${t('React')}</h3><div class="rxbar">${['heart','flame','crown','star'].map(x=>`<button data-rx="${x}" aria-label="${x}">${SV(ICONS[x])}</button>`).join('')}</div>`);
     $('#sheet').querySelectorAll('[data-rx]').forEach(b=>b.onclick=()=>{m.rx=[b.dataset.rx];save();closeSheet();renderMsgs();});};
