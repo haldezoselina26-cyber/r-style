@@ -324,11 +324,22 @@ function rcPC(){const pc=new RTCPeerConnection({iceServers:ICE});RC.pc=pc;RC.rem
   RC.local.getTracks().forEach(tr=>pc.addTrack(tr,RC.local));return pc;}
 async function rcFlushIce(){const L=RC.pendingIce.splice(0);for(const c of L){try{await RC.pc.addIceCandidate(c);}catch(_){}}}
 async function rcOffer(){const o=await RC.pc.createOffer();await RC.pc.setLocalDescription(o);rcSend(RC.peer,{t:'offer',sdp:RC.pc.localDescription.toJSON?RC.pc.localDescription.toJSON():RC.pc.localDescription,video:CALL.video});}
+
+/* v18.1 permission helper: one button to allow camera + microphone, with simple help if Safari blocked it */
+(function(){const T={'Allow camera and microphone':['Autoriser caméra et micro','אפשר מצלמה ומיקרופון','السماح بالكاميرا والميكروفون'],
+ 'R-Style needs your microphone (and camera for video) to call your friends.':['R-Style a besoin du micro (et de la caméra pour la vidéo) pour appeler tes amis.','R-Style צריכה את המיקרופון (ואת המצלמה לשיחת וידאו) כדי להתקשר לחברים.','يحتاج R-Style إلى الميكروفون (والكاميرا للفيديو) للاتصال بأصدقائك.'],
+ 'Still blocked? In Safari tap “aA” next to the address → Website Settings → Camera and Microphone → Allow. Then come back and tap the button again.':['Toujours bloqué ? Dans Safari touche « aA » à côté de l’adresse → Réglages du site web → Caméra et Micro → Autoriser. Puis reviens et appuie encore sur le bouton.','עדיין חסום? בספארי לחץ על "aA" ליד הכתובת ← הגדרות אתר ← מצלמה ומיקרופון ← אפשר. אחר כך חזור ולחץ שוב על הכפתור.','ما زال محظورًا؟ في Safari اضغط على «aA» بجانب العنوان ← إعدادات الموقع ← الكاميرا والميكروفون ← سماح. ثم عد واضغط الزر مرة أخرى.']};
+ ['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
+function askPerm(video,onOk,onNo){let tries=0;openSheet(`<h3>🎙️${video?' 📷':''} ${t('Allow camera and microphone')}</h3><p class="muted" style="margin:6px 0 0">${t('R-Style needs your microphone (and camera for video) to call your friends.')}</p>
+  <button class="btn primary" id="permGo" style="margin-top:14px">${t('Allow camera and microphone')}</button><p class="muted" id="permHelp" style="display:none;margin:12px 0 0;font-size:13px;line-height:1.5"></p><button class="btn" id="permNo" style="margin-top:8px">${t('Cancel')}</button>`);
+  $('#permNo').onclick=()=>{closeSheet();onNo&&onNo();};
+  $('#permGo').onclick=async()=>{tries++;try{const st=await navigator.mediaDevices.getUserMedia({audio:true,video:!!video});st.getTracks().forEach(x=>x.stop());closeSheet();onOk();}
+    catch(_){const h=$('#permHelp');if(h){h.style.display='block';h.textContent=t('Still blocked? In Safari tap “aA” next to the address → Website Settings → Camera and Microphone → Allow. Then come back and tap the button again.');}}};}
 /* outgoing */
 const _startCall18=startCall;
 startCall=async function(id,video){const u=uuidOf(roomInfo(id).uid||id);if(!(REAL&&SB&&ME_ID&&u))return _startCall18(id,video);
   if(!isFriend(rid(u))){toast(t('Calls are only between friends who follow each other.'));return;}if(RC.pc){return;}
-  try{await rcMedia(video);}catch(_){toast(t('Allow the camera and microphone to call.'));return;}
+  try{await rcMedia(video);}catch(_){askPerm(video,()=>startCall(id,video));return;}
   RC.peer=u;RC.id=rid(u);RC.role='caller';RC.connected=false;RC.callId='c'+Date.now()+Math.random().toString(36).slice(2,6);RC.pendingIce=[];
   Object.assign(CALL,{id:rid(u),video,t0:Date.now(),muted:false,spk:false,menu:false,filters:false,filter:'none',people:[rid(u)],host:S.vip,real:true});
   $('#call').classList.add('on');renderCall();clearInterval(CALL.timer);CALL.timer=setInterval(()=>{const e=$('#callTime');if(e)e.textContent=RC.connected?callClock():'';},1000);
@@ -340,7 +351,7 @@ function rcShowIncoming(p){const id=rid(p.from);const u=USERS[id]||{name:p.name|
    <div class="btns"><div><button class="no" id="incNo" aria-label="${t('Decline')}">${HANG}</button><span class="lb">${t('Decline')}</span></div><div><button class="yes" id="incYes" aria-label="${t('Accept')}">${SV(p.video?ICONS.video:ICONS.phone)}</button><span class="lb">${t('Accept')}</span></div></div>`;
   d.classList.add('on');try{navigator.vibrate&&navigator.vibrate([400,200,400,200,400]);}catch(_){}
   $('#incNo').onclick=()=>{d.classList.remove('on');rcSend(p.from,{t:'decline'});RC.callId=null;};
-  $('#incYes').onclick=async()=>{d.classList.remove('on');try{await rcMedia(p.video);}catch(_){toast(t('Allow the camera and microphone to call.'));rcSend(p.from,{t:'decline'});return;}
+  $('#incYes').onclick=async()=>{d.classList.remove('on');try{await rcMedia(p.video);}catch(_){askPerm(p.video,()=>{d.classList.add('on');$('#incYes').click();},()=>rcSend(p.from,{t:'decline'}));return;}
     RC.peer=p.from;RC.id=id;RC.role='callee';RC.connected=false;RC.pendingIce=[];
     Object.assign(CALL,{id,video:!!p.video,t0:Date.now(),muted:false,spk:false,menu:false,filters:false,filter:'none',people:[id],host:false,real:true});
     $('#call').classList.add('on');renderCall();clearInterval(CALL.timer);CALL.timer=setInterval(()=>{const e=$('#callTime');if(e)e.textContent=RC.connected?callClock():'';},1000);
