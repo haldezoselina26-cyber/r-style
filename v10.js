@@ -652,7 +652,7 @@ async function productPhoto(src,box){const im=await loadImg(src);if(!im)return n
   while(st.length){const i=st.pop();if(mask[i])continue;if(dist(i)>thr*3)continue;mask[i]=1;const xx=i%w,yy=(i/w)|0;if(xx>0)st.push(i-1);if(xx<w-1)st.push(i+1);if(yy>0)st.push(i-w);if(yy<h-1)st.push(i+w);}
   let kept=0;for(let i=0;i<w*h;i++){if(mask[i])p[i*4+3]=0;else kept++;}
   /* if almost nothing (or everything) was kept, the background was too busy: keep the plain crop */
-  const okCut=kept>w*h*.12&&kept<w*h*.97;if(okCut){/* soften the edge */for(let i=0;i<w*h;i++){if(mask[i])continue;const xx=i%w,yy=(i/w)|0;let e=0;if(xx>0&&mask[i-1])e++;if(xx<w-1&&mask[i+1])e++;if(yy>0&&mask[i-w])e++;if(yy<h-1&&mask[i+w])e++;if(e)p[i*4+3]=255-e*45;}x.putImageData(d,0,0);}
+  const okCut=false&&kept>w*h*.12&&kept<w*h*.97;if(okCut){/* soften the edge */for(let i=0;i<w*h;i++){if(mask[i])continue;const xx=i%w,yy=(i/w)|0;let e=0;if(xx>0&&mask[i-1])e++;if(xx<w-1&&mask[i+1])e++;if(yy>0&&mask[i-w])e++;if(yy<h-1&&mask[i+w])e++;if(e)p[i*4+3]=255-e*45;}x.putImageData(d,0,0);}
   else{c.getContext('2d').drawImage(im,sx,sy,cw,ch,0,0,w,h);}
   /* final catalog photo: 600×800, white, centred, soft shadow, a bit brighter */
   const o=document.createElement('canvas');o.width=600;o.height=800;const ox=o.getContext('2d');ox.fillStyle='#ffffff';ox.fillRect(0,0,600,800);
