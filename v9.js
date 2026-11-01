@@ -1101,3 +1101,6 @@ const _renderSnap109=renderSnap;renderSnap=function(){_renderSnap109();const s=$
  const native=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
  if(native)setTimeout(go,300);else el.classList.add('wait');
  el.addEventListener('click',()=>{if(el.classList.contains('wait'))go();else finish();});})();
+
+/* v11.1 missing translations */
+(function(){const T={'Chosen for {w} weather ({d}°), from clean clothes you haven\'t worn in the last days.':['Choisi pour un temps {w} ({d}°), avec des vêtements propres que tu n’as pas portés ces derniers jours.','נבחר למזג אוויר {w} ({d}°), מבגדים נקיים שלא לבשת בימים האחרונים.','اختير لطقس {w} ({d}°)، من ملابس نظيفة لم ترتدها في الأيام الأخيرة.']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
