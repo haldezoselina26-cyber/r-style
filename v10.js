@@ -705,3 +705,13 @@ document.addEventListener('click',e=>{const b=e.target.closest('.acts .moreAct')
   bar.addEventListener('click',e=>{if(e.target.closest('.animMain')){bar.classList.toggle('open');e.stopPropagation();return;}if(e.target.closest('[data-anim]'))setTimeout(()=>bar.classList.remove('open'),300);},true);})();
 /* home: Ruby is already first in Messages → no extra button at the top */
 (function(){const css=document.createElement('style');css.textContent='#rubyBtn{display:none!important}';document.head.appendChild(css);})();
+
+/* v24.1 Messages: no buttons in the header (search bar always there), no streak counters in the list, camera inside "+" */
+(function(){const css=document.createElement('style');css.textContent=`
+#chat .top #searchBtn,#chat .top #newGroup{display:none!important}
+#chat #searchBox{display:flex!important}
+#convs .crow .meta .flame{display:none!important}
+#composer #snapBtn{display:none!important}`;document.head.appendChild(css);
+ const sb=$('#searchBox');if(sb)sb.hidden=false;
+ /* "New group" moves into the attach menu? No: it goes to the long-press on the title → keep it reachable from the search bar */
+ const box=$('#searchBox');if(box&&!box.querySelector('.ngBtn')){box.insertAdjacentHTML('beforeend',`<button type="button" class="ngBtn" aria-label="${t('New group')}" style="border:0;background:none;color:var(--muted);display:grid;place-items:center;padding:0 2px">${SV(ICONS.group,'style="width:20px;height:20px"')}</button>`);box.querySelector('.ngBtn').onclick=e=>{e.preventDefault();$('#newGroup').click();};}})();
