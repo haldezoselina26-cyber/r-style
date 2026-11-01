@@ -626,3 +626,48 @@ openRequests=function(){const reqs=realReqs();
 
 /* install the send-message extensions after the server hook (hookPush runs when Supabase is ready) */
 const _hookPushW=hookPush;hookPush=function(){_hookPushW();PUSHW.forEach(f=>f());};
+
+/* ====================== v23: clean "product photo" for each scanned piece of clothing ====================== */
+(function(){const T={'Ruby is making clean photos of your clothes…':['Ruby prépare des photos propres de tes vêtements…','רובי מכינה תמונות נקיות של הבגדים…','روبي تجهز صورًا نظيفة لملابسك…'],
+ '✨ Ruby will cut out each piece and put it on a clean white background.':['✨ Ruby va découper chaque vêtement et le mettre sur un fond blanc propre.','✨ רובי תגזור כל בגד ותשים אותו על רקע לבן ונקי.','✨ ستقص روبي كل قطعة وتضعها على خلفية بيضاء نظيفة.']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});
+ const css=document.createElement('style');css.textContent=`#sheet .gem.why{display:none}`;document.head.appendChild(css);})();
+let recSrc=null,recBoxesP=null;
+const _recognize23=recognize;recognize=async function(src){recSrc=await downscale(src,1100,.9);recBoxesP=null;await _recognize23.apply(this,arguments);
+  if(recs&&recs.length&&AI&&AI_IMG){const list=recs.map((r,i)=>`${i}: ${r.name} (${r.cat}, ${r.colorName||''})`).join('; ');
+    recBoxesP=AI.json(`Find each of these clothing items in the photo and give a tight bounding box around the whole piece. Items: ${list}. Return JSON only: {"boxes":[{"i":0,"box_2d":[ymin,xmin,ymax,xmax]}]} with coordinates from 0 to 1000.`,{images:[dataUrlToBlob(recSrc)]})
+      .then(v=>{(v&&v.boxes||[]).forEach(b=>{const r=recs[+b.i];if(r&&Array.isArray(b.box_2d)&&b.box_2d.length===4)r.box=b.box_2d.map(Number);});}).catch(()=>{});
+    const s=$('#sheet');if(s&&!s.querySelector('.cleanHint'))s.querySelector('#recSave')?.insertAdjacentHTML('beforebegin',`<div class="why cleanHint"><span></span><span>${t('✨ Ruby will cut out each piece and put it on a clean white background.')}</span></div>`);}};
+function loadImg(src){return new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src;});}
+async function productPhoto(src,box){const im=await loadImg(src);if(!im)return null;const W=im.width,H=im.height;
+  let [y0,x0,y1,x1]=box&&box.length===4?box:[0,0,1000,1000];if(y1<=y0||x1<=x0)[y0,x0,y1,x1]=[0,0,1000,1000];
+  const pad=.05;let sx=Math.max(0,(x0/1000-pad)*W),sy=Math.max(0,(y0/1000-pad)*H),ex=Math.min(W,(x1/1000+pad)*W),ey=Math.min(H,(y1/1000+pad)*H);const cw=ex-sx,ch=ey-sy;
+  const sc=Math.min(1,520/Math.max(cw,ch));const w=Math.max(8,Math.round(cw*sc)),h=Math.max(8,Math.round(ch*sc));
+  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(im,sx,sy,cw,ch,0,0,w,h);
+  const d=x.getImageData(0,0,w,h),p=d.data;
+  /* background colour = average of the border pixels */
+  let br=0,bg=0,bb=0,n=0;const add=(i)=>{br+=p[i];bg+=p[i+1];bb+=p[i+2];n++;};for(let i=0;i<w;i++){add(i*4);add(((h-1)*w+i)*4);}for(let j=0;j<h;j++){add(j*w*4);add((j*w+w-1)*4);}br/=n;bg/=n;bb/=n;
+  /* remove everything connected to the border that looks like the background */
+  const thr=46,mask=new Uint8Array(w*h),st=[];const dist=i=>{const k=i*4;return Math.abs(p[k]-br)+Math.abs(p[k+1]-bg)+Math.abs(p[k+2]-bb);};
+  for(let i=0;i<w;i++){st.push(i,(h-1)*w+i);}for(let j=0;j<h;j++){st.push(j*w,j*w+w-1);}
+  while(st.length){const i=st.pop();if(mask[i])continue;if(dist(i)>thr*3)continue;mask[i]=1;const xx=i%w,yy=(i/w)|0;if(xx>0)st.push(i-1);if(xx<w-1)st.push(i+1);if(yy>0)st.push(i-w);if(yy<h-1)st.push(i+w);}
+  let kept=0;for(let i=0;i<w*h;i++){if(mask[i])p[i*4+3]=0;else kept++;}
+  /* if almost nothing (or everything) was kept, the background was too busy: keep the plain crop */
+  const okCut=kept>w*h*.12&&kept<w*h*.97;if(okCut){/* soften the edge */for(let i=0;i<w*h;i++){if(mask[i])continue;const xx=i%w,yy=(i/w)|0;let e=0;if(xx>0&&mask[i-1])e++;if(xx<w-1&&mask[i+1])e++;if(yy>0&&mask[i-w])e++;if(yy<h-1&&mask[i+w])e++;if(e)p[i*4+3]=255-e*45;}x.putImageData(d,0,0);}
+  else{c.getContext('2d').drawImage(im,sx,sy,cw,ch,0,0,w,h);}
+  /* final catalog photo: 600×800, white, centred, soft shadow, a bit brighter */
+  const o=document.createElement('canvas');o.width=600;o.height=800;const ox=o.getContext('2d');ox.fillStyle='#ffffff';ox.fillRect(0,0,600,800);
+  const s2=Math.min(520/w,700/h);const dw=w*s2,dh=h*s2,dx=(600-dw)/2,dy=(800-dh)/2;
+  if(okCut){ox.save();ox.shadowColor='rgba(0,0,0,.18)';ox.shadowBlur=28;ox.shadowOffsetY=14;}
+  try{ox.filter='brightness(1.05) contrast(1.07) saturate(1.05)';}catch(_){}
+  if(!okCut){ox.save();ox.beginPath();if(ox.roundRect)ox.roundRect(dx,dy,dw,dh,22);else ox.rect(dx,dy,dw,dh);ox.clip();}
+  ox.drawImage(c,dx,dy,dw,dh);ox.restore();try{ox.filter='none';}catch(_){}
+  return o.toDataURL('image/jpeg',.86);}
+/* Gold: real AI product photo when the image model is switched on (falls back to the free version) */
+async function aiProductPhoto(src,rec){if(!(S.vip&&AI&&AI.gemini))return null;try{const d=await gemCall({image:src,messages:[{role:'user',content:`Create a clean e-commerce product photo of ONLY the ${rec.name} (${rec.cat}, ${rec.colorName||''}) from this picture: flat front view, no person, no hanger, pure white background, soft studio light, same colours and details. Return only the image.`}],imageOut:true});
+  return d&&typeof d.image==='string'&&d.image.startsWith('data:image')?d.image:null;}catch(_){return null;}}
+document.addEventListener('click',async e=>{const b=e.target.closest('#recSave');if(!b||!recSrc||b.dataset.busy)return;e.stopImmediatePropagation();e.preventDefault();b.dataset.busy='1';
+  b.innerHTML=`<span class="spin"></span> ${t('Ruby is making clean photos of your clothes…')}`;try{if(recBoxesP)await Promise.race([recBoxesP,new Promise(r=>setTimeout(r,12000))]);}catch(_){}
+  let a=0,m=[];for(const r of recs.filter(r=>r.on)){if(r.match&&r.same){m.push(r.match);continue;}
+    let img=null;const crop=await productPhoto(recSrc,r.box);img=(await aiProductPhoto(crop||recSrc,r))||crop||recImg;
+    S.wardrobe.unshift({id:'w'+Date.now()+a,name:r.name,cat:r.cat,img:await downscale(img,600,.85),color:r.color,colorName:r.colorName,warmth:r.warmth,style:r.style,occasion:r.occasion});a++;}
+  if(m.length)markWorn(m);S.today=null;save();closeSheet();wCat='All';wTab='items';$$('[data-wt]').forEach(x=>x.classList.toggle('on',x.dataset.wt==='items'));show('wardrobe');toast(t('Added {a} · worn today {b}',{a,b:m.length}));recSrc=null;},true);
