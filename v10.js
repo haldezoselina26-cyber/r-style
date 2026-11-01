@@ -494,3 +494,12 @@ const _startCall19=startCall;startCall=async function(id,video){await _startCall
   clearInterval(RC.reinv);RC.reinv=setInterval(()=>{if(!RC.pc||RC.callId!==cid||RC.accepted||RC.connected){clearInterval(RC.reinv);return;}rcSend(u,{t:'invite',video,name:me().username});},3000);};
 const _rcOnSig19=rcOnSig;rcOnSig=async function(p){if(p&&p.t==='accept'&&p.callId===RC.callId){RC.accepted=true;clearInterval(RC.reinv);}if(p&&p.t==='decline'&&p.callId===RC.callId)clearInterval(RC.reinv);return _rcOnSig19(p);};
 const _rcHang19=rcHang;rcHang=function(){clearInterval(RC.reinv);RC.accepted=false;return _rcHang19.apply(this,arguments);};
+
+/* ====================== v19.1 message notifications + clear AI errors ====================== */
+async function pushText(u,text){try{await SB.functions.invoke(PUSH_FN,{body:{to:u,text:String(text||'').slice(0,100)}});}catch(_){}}
+(function(){const _p=pushMsg;pushMsg=function(id,m){const r=_p.apply(this,arguments);const u=uuidOf(id);
+  if(u&&m&&m.f==='me'&&SB&&ME_ID){const prev=m.t||(m.vid?'🎬 '+t('Video message'):m.a||m.voice?'🎙️ '+t('Voice message'):m.img?'📷 '+t('Photo'):'');const cid=setInterval(()=>{if(m.dbid){clearInterval(cid);pushText(u,prev);}if(m.failed)clearInterval(cid);},700);setTimeout(()=>clearInterval(cid),30000);}
+  return r;};})();
+const _aiErr191=aiErr;aiErr=function(e){if(AI&&AI.gemini){const m=String((e&&(e.message||e.error))||e||'');
+  if(/quota|429|rate|RESOURCE_EXHAUSTED/i.test(m))return t('Ruby is busy right now. Try again in a minute.');return t('Ruby could not answer. Please try again.')+' ('+m.slice(0,140)+')';}return _aiErr191(e);};
+const _gemCall191=gemCall;gemCall=async function(body){try{return await _gemCall191(body);}catch(e){let msg=e&&e.message||String(e);try{if(e&&e.context&&e.context.json){const j=await e.context.json();msg=(j&&(j.error||j.message))||msg;}}catch(_){}const er=new Error(msg);if(e&&e.code)er.code=e.code;throw er;}};

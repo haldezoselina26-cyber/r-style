@@ -1104,3 +1104,8 @@ const _renderSnap109=renderSnap;renderSnap=function(){_renderSnap109();const s=$
 
 /* v11.1 missing translations */
 (function(){const T={'Chosen for {w} weather ({d}°), from clean clothes you haven\'t worn in the last days.':['Choisi pour un temps {w} ({d}°), avec des vêtements propres que tu n’as pas portés ces derniers jours.','נבחר למזג אוויר {w} ({d}°), מבגדים נקיים שלא לבשת בימים האחרונים.','اختير لطقس {w} ({d}°)، من ملابس نظيفة لم ترتدها في الأيام الأخيرة.']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
+
+/* v11.2 clearer Home icon in the bottom bar: a real little house (roof, chimney, door, window) */
+ICONS.home='<path d="M3 11.2 12 3.6l9 7.6"/><path d="M5.2 9.6V20.4h13.6V9.6"/><path d="M10 20.4v-5.2a2 2 0 0 1 4 0v5.2"/><path d="M16.2 5.9V3.6h2v4"/>';
+(function(){const css=document.createElement('style');css.textContent=`#nav [data-go="home"].on svg path:nth-child(2){fill:currentColor;fill-opacity:.18}#nav [data-go="home"] svg{width:26px;height:26px}`;document.head.appendChild(css);
+ $$('i[data-ic="home"]').forEach(el=>{el.innerHTML=SV(ICONS.home);});})();
