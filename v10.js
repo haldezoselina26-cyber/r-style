@@ -663,7 +663,7 @@ async function productPhoto(src,box){const im=await loadImg(src);if(!im)return n
   ox.drawImage(c,dx,dy,dw,dh);ox.restore();try{ox.filter='none';}catch(_){}
   return o.toDataURL('image/jpeg',.86);}
 /* Gold: real AI product photo when the image model is switched on (falls back to the free version) */
-async function aiProductPhoto(src,rec){if(!(S.vip&&AI&&AI.gemini))return null;try{const d=await gemCall({image:src,messages:[{role:'user',content:`Create a clean e-commerce product photo of ONLY the ${rec.name} (${rec.cat}, ${rec.colorName||''}) from this picture: flat front view, no person, no hanger, pure white background, soft studio light, same colours and details. Return only the image.`}],imageOut:true});
+async function aiProductPhoto(src,rec){if(!(AI&&AI.gemini))return null;try{const d=await gemCall({image:src,messages:[{role:'user',content:`Create a clean e-commerce product photo of ONLY the ${rec.name} (${rec.cat}, ${rec.colorName||''}) from this picture: flat front view, no person, no hanger, pure white background, soft studio light, same colours and details. Return only the image.`}],imageOut:true});
   return d&&typeof d.image==='string'&&d.image.startsWith('data:image')?d.image:null;}catch(_){return null;}}
 document.addEventListener('click',async e=>{const b=e.target.closest('#recSave');if(!b||!recSrc||b.dataset.busy)return;e.stopImmediatePropagation();e.preventDefault();b.dataset.busy='1';
   b.innerHTML=`<span class="spin"></span> ${t('Ruby is making clean photos of your clothes…')}`;try{if(recBoxesP)await Promise.race([recBoxesP,new Promise(r=>setTimeout(r,12000))]);}catch(_){}
