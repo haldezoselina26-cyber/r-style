@@ -744,7 +744,7 @@ const _openProfile25=openProfile;openProfile=function(id){const u=uuidOf(id);if(
   const posts=REALPOSTS.filter(p=>p.author===u);const grid=$('#profBody .vgrid');
   if(grid)grid.innerHTML=posts.length?posts.map(p=>p.video?`<div data-pv="${p.id}" style="background:#111"><video src="${p.video}#t=0.1" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"></video><span>▶ ${fmt(p.likes+(S.likes[p.id]?1:0))}</span></div>`:`<div data-pv="${p.id}" style="background:#222 center/cover url(${p.img})"><span>♥ ${fmt(p.likes+(S.likes[p.id]?1:0))}</span></div>`).join(''):`<p class="muted" style="grid-column:1/-1;text-align:center;padding:30px">${t('No posts yet')}</p>`;
   const st=$$('#profBody .stats b');if(st.length>=3){st[0].textContent=posts.length;st[1].textContent='…';st[2].textContent='…';
-    realCount('posts','id',u).then(n=>{if(n!=null)st[0].textContent=n;});realCount('follows','followee',u).then(n=>{st[1].textContent=n==null?'—':fmt(n);});realCount('follows','follower',u).then(n=>{st[2].textContent=n==null?'—':fmt(n);});}
+    realCount('posts','id',u).then(n=>{if(n!=null)st[0].textContent=n;});}
   const sc=$('#profBody .aiscore i');if(sc)sc.textContent='—';const bd=$('#profBody .badges');if(bd)bd.innerHTML='';};
 document.addEventListener('click',e=>{const b=e.target.closest('#profBody [data-pv]');if(!b)return;const i=feedList().findIndex(p=>p.id===b.dataset.pv);closeOverlay('profile');show('shorts');if(i>=0)setTimeout(()=>{const el=$$('#feed .short')[i];if(el)el.scrollIntoView();},150);});
 
@@ -903,3 +903,45 @@ button,a,.crow,.fc,.item{touch-action:manipulation}
 (function(){const mp=window.movePill;if(!mp)return;let q=0;window.movePill=function(){if(q)return;q=requestAnimationFrame(()=>{q=0;mp();});};movePill=window.movePill;})();
 /* 6. camera: nothing to draw any more (no filters) */
 bxLoop=function(){cancelAnimationFrame(BX.raf);BX.raf=0;const o=$('#snap .bxOut');if(o)o.remove();};
+
+/* ====================== v31: Shorts subscriptions are separate from friends + account search in Shorts ====================== */
+S.subs=S.subs||{};
+function isSub(id){return !!(S.subs||{})[id];}
+followBtn=function(uid){const on=isSub(uid);return `<button class="follow ${on?'on':''}" data-subu="${uid}">${on?t('Subscribed'):t('Subscribe')}</button>`;};
+async function toggleSub(uid){const on=!isSub(uid);S.subs[uid]=on;if(!on)delete S.subs[uid];save();
+  $$(`[data-subu="${uid}"]`).forEach(b=>{b.classList.toggle('on',on);b.textContent=on?t('Subscribed'):t('Subscribe');});
+  const u=uuidOf(uid);if(REAL&&SB&&ME_ID&&u){const r=on?await SB.from('subs').insert({follower:ME_ID,followee:u}):await SB.from('subs').delete().eq('follower',ME_ID).eq('followee',u);if(r&&r.error&&!/duplicate/i.test(r.error.message||''))console.warn('subs',r.error);}
+  if(current==='shorts'&&feedMode==='following')renderFeed();}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-subu]');if(!b)return;e.stopPropagation();e.preventDefault();toggleSub(b.dataset.subu);},true);
+/* the "Subscriptions" tab, its circles and its videos use subscriptions, not friends */
+(function(){const swap=fn=>function(){const f=S.following;S.following=S.subs||{};try{return fn.apply(this,arguments);}finally{S.following=f;}};
+ renderFeed=swap(renderFeed);renderSubs=swap(renderSubs);subVideos=swap(subVideos);})();
+async function loadSubs(){if(!(REAL&&SB&&ME_ID))return;try{const {data,error}=await SB.from('subs').select('followee').eq('follower',ME_ID);if(error)return;
+  const ids=(data||[]).map(x=>x.followee);S.subs={};ids.forEach(u=>S.subs[rid(u)]=true);const miss=ids.filter(u=>!USERS[rid(u)]);if(miss.length){const {data:ps}=await SB.from('profiles').select('*').in('id',miss);(ps||[]).forEach(addReal);}
+  save();if(current==='shorts')renderFeed();}catch(_){}}
+{const _al31=afterLogin;afterLogin=async function(){await _al31();loadSubs();};}
+/* counts: subscribers / subscriptions */
+{const _pr31=openProfile;openProfile=function(id){_pr31(id);const u=uuidOf(id);if(!u||!REAL||!SB)return;const st=$$('#profBody .stats b');const lb=$$('#profBody .stats small');if(st.length<3)return;
+  if(lb[1])lb[1].textContent=t('Subscribers');if(lb[2])lb[2].textContent=t('Subscriptions');st[1].textContent='…';st[2].textContent='…';
+  realCount('subs','followee',u).then(n=>{st[1].textContent=n==null?'—':fmt(n);});realCount('subs','follower',u).then(n=>{st[2].textContent=n==null?'—':fmt(n);});};}
+{const _rm31=renderMe;renderMe=function(){_rm31();const st=$$('#meBody .meStats b'),lb=$$('#meBody .meStats small');if(st.length<3)return;if(lb[1])lb[1].textContent=t('Subscribers');if(lb[2])lb[2].textContent=t('Subscriptions');
+  st[2].textContent=fmt(Object.keys(S.subs||{}).length);if(REAL&&SB&&ME_ID)realCount('subs','followee',ME_ID).then(n=>{if(n!=null&&st[1].isConnected)st[1].textContent=fmt(n);});else st[1].textContent='0';};}
+/* search accounts from Shorts */
+(function(){const top=$('.shortsTop');if(top&&!$('#shSearch')){top.insertAdjacentHTML('afterbegin',`<button class="shSearch" id="shSearch" aria-label="${t('Search accounts')}">${SV(ICONS.search)}</button>`);}
+ const css=document.createElement('style');css.textContent=`.shortsTop .shSearch{position:absolute;inset-inline-start:14px;width:38px;height:38px;border-radius:50%;background:#ffffff26;color:#fff;display:grid;place-items:center;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:0}
+.shortsTop .shSearch svg{width:20px;height:20px}
+.accRes{display:flex;flex-direction:column;gap:2px;margin-top:10px;max-height:58vh;overflow:auto}
+.accRow{display:flex;align-items:center;gap:12px;padding:8px 2px;border:0;background:none;color:var(--fg);text-align:start;width:100%}
+.accRow .who{flex:1;display:flex;flex-direction:column;min-width:0}.accRow .who b{font-size:15px}.accRow .who small{color:var(--muted);font-size:12.5px}
+.accRow .follow{flex:none}`;document.head.appendChild(css);
+ const T={'Subscribe':['S\'abonner','הירשם','اشتراك'],'Subscribed':['Abonné','רשום','مشترك'],'Subscribers':['Abonnés','מנויים','المشتركون'],'Subscriptions':['Abonnements','מינויים','الاشتراكات'],
+  'Search accounts':['Rechercher des comptes','חיפוש חשבונות','ابحث عن حسابات'],'Search a @username':['Cherche un @pseudo','חפש @שם משתמש','ابحث عن @اسم'],'No results.':['Aucun résultat.','אין תוצאות.','لا نتائج.']};
+ ['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});
+ let tok=0;const row=id=>{const u=USERS[id];return `<div class="accRow" data-acc="${id}">${avHTML(id,46)}<span class="who"><b>@${esc(u.handle||u.name)}</b><small>${esc(u.name||'')}</small></span>${followBtn(id)}</div>`;};
+ async function run(q){const box=$('#accRes');if(!box)return;const my=++tok;q=q.trim().replace(/^@/,'');if(!q){box.innerHTML='';return;}
+   let ids=[];if(REAL&&SB&&ME_ID){const {data}=await SB.from('profiles').select('*').ilike('username','%'+q.replace(/[%_]/g,'')+'%').neq('id',ME_ID).limit(25);if(my!==tok)return;(data||[]).forEach(p=>ids.push(addReal(p)));}
+   else ids=Object.keys(USERS).filter(id=>(USERS[id].handle+' '+USERS[id].name).toLowerCase().includes(q.toLowerCase()));
+   ids=ids.filter(id=>!S.blocked[id]);box.innerHTML=ids.length?ids.map(row).join(''):`<p class="muted" style="text-align:center;padding:18px">${t('No results.')}</p>`;}
+ document.addEventListener('click',e=>{if(!e.target.closest('#shSearch'))return;openSheet(`<h3>${t('Search accounts')}</h3><input class="field" id="accQ" type="search" autocomplete="off" placeholder="${t('Search a @username')}" style="height:46px;font-size:15px;margin-top:10px"><div class="accRes" id="accRes"></div>`);
+   const i=$('#accQ');let d=null;i.oninput=()=>{clearTimeout(d);d=setTimeout(()=>run(i.value),250);};setTimeout(()=>i.focus(),150);
+   $('#accRes').onclick=ev=>{if(ev.target.closest('[data-subu]'))return;const r=ev.target.closest('[data-acc]');if(!r)return;closeSheet();openProfile(r.dataset.acc);};});})();
