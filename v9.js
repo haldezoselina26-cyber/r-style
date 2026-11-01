@@ -1041,6 +1041,7 @@ const _renderSnap109=renderSnap;renderSnap=function(){_renderSnap109();const s=$
 
 /* v11.0 opening intro (like a movie studio logo): original R-Style animation + original sound, every time the app opens */
 (function(){if(/[?&]nointro/.test(location.search))return;
+ const GOLD=(()=>{try{const x=JSON.parse(localStorage.getItem('rstyle_v3')||'{}');return !!(x.vip||(x.bdayVip&&x.bdayVip===new Date().toISOString().slice(0,10)));}catch(_){return false}})();
  const css=document.createElement('style');css.textContent=`
 #rsIntro{position:fixed;inset:0;z-index:100000;background:#000;display:grid;place-items:center;overflow:hidden;cursor:pointer;transition:opacity .45s}
 #rsIntro.out{opacity:0;pointer-events:none}
@@ -1057,22 +1058,37 @@ const _renderSnap109=renderSnap;renderSnap=function(){_renderSnap109();const s=$
 @keyframes rsRest{to{max-width:300px}}@keyframes rsTxt{to{transform:none;opacity:1}}
 @keyframes rsBeam{0%{opacity:0;transform:translate(-50%,-50%) rotate(var(--rot)) scaleY(.1)}40%{opacity:.9}100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--rot)) scaleY(1.2) translateX(140px)}}
 @keyframes rsFlash{0%{opacity:0}25%{opacity:1}100%{opacity:.25}}@keyframes rsTag{to{opacity:1}}
+#rsIntro.gold .r{color:#E8C25A;text-shadow:0 0 30px rgba(232,194,90,.9),0 0 90px rgba(212,175,55,.6)}#rsIntro.gold .rest span{background:linear-gradient(180deg,#FFF1C1,#D4AF37 55%,#9C7A1E);-webkit-background-clip:text;background-clip:text;color:transparent}#rsIntro.gold .beam{background:linear-gradient(180deg,transparent,#D4AF37 40%,#FFE9A8 50%,#D4AF37 60%,transparent)}#rsIntro.gold .flash{background:radial-gradient(circle at 50% 50%,rgba(212,175,55,.55),transparent 55%)}#rsIntro.gold .tagline{color:#E8C25A}
 #rsIntro.wait *{animation-play-state:paused!important}#rsIntro .tap{position:absolute;bottom:14%;left:0;right:0;text-align:center;color:#fff;font:700 17px Inter,system-ui;opacity:0;transition:opacity .3s}#rsIntro.wait .tap{opacity:.9;animation:rsPulse 1.4s ease-in-out infinite!important;animation-play-state:running!important}#rsIntro.wait .r{opacity:.7;transform:scale(1);filter:none}@keyframes rsPulse{50%{opacity:.35}}`;document.head.appendChild(css);
- const el=document.createElement('div');el.id='rsIntro';
- el.innerHTML='<i class="beam"></i><i class="beam"></i><i class="beam"></i><i class="beam"></i><div class="flash"></div><div class="wrap" dir="ltr"><span class="r">R</span><span class="rest"><span>-STYLE</span></span></div><div class="tagline">STYLE · AI · FRIENDS</div><div class="tap">'+({he:'לחצו כדי להיכנס',fr:'Touche pour entrer',ar:'اضغط للدخول'}[(()=>{try{return JSON.parse(localStorage.getItem('rstyle_v3')||'{}').lang}catch(_){return ''}})()]||'Tap to enter')+'</div>';
+ const el=document.createElement('div');el.id='rsIntro';if(GOLD)el.classList.add('gold');
+ el.innerHTML='<i class="beam"></i><i class="beam"></i><i class="beam"></i><i class="beam"></i><div class="flash"></div><div class="wrap" dir="ltr"><span class="r">R</span><span class="rest"><span>-STYLE</span></span></div><div class="tagline">'+(GOLD?'GOLD STYLE':'STYLE · AI · FRIENDS')+'</div><div class="tap">'+({he:'לחצו כדי להיכנס',fr:'Touche pour entrer',ar:'اضغط للدخول'}[(()=>{try{return JSON.parse(localStorage.getItem('rstyle_v3')||'{}').lang}catch(_){return ''}})()]||'Tap to enter')+'</div>';
  document.body.appendChild(el);
  /* original sound: deep "boom" + bright rising chord (made with Web Audio, no music files) */
  let played=false;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(_){}
  /* the sound is drawn into a small WAV file first, then played with a normal <audio> (works on iPhone, even in silent mode) */
- function design(c,t){const master=c.createGain();master.gain.value=.55;master.connect(c.destination);
-   const boom=c.createOscillator(),bg=c.createGain();boom.type='sine';boom.frequency.setValueAtTime(110,t);boom.frequency.exponentialRampToValueAtTime(38,t+.9);bg.gain.setValueAtTime(0,t);bg.gain.linearRampToValueAtTime(1,t+.02);bg.gain.exponentialRampToValueAtTime(.001,t+1.4);boom.connect(bg).connect(master);boom.start(t);boom.stop(t+1.5);
-   const n=c.createBufferSource(),buf=c.createBuffer(1,Math.floor(c.sampleRate*.4),c.sampleRate),d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);n.buffer=buf;const nf=c.createBiquadFilter();nf.type='lowpass';nf.frequency.value=900;const ng=c.createGain();ng.gain.value=.5;n.connect(nf).connect(ng).connect(master);n.start(t);
-   [[293.66,1.0],[440,1.06],[587.33,1.12],[880,1.2]].forEach(([f,dl])=>{const o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(0,t+dl);g.gain.linearRampToValueAtTime(.18,t+dl+.04);g.gain.exponentialRampToValueAtTime(.001,t+dl+1.6);o.connect(g).connect(master);o.start(t+dl);o.stop(t+dl+1.7);});}
+ function design(c,t,gold){const out=c.createGain();out.gain.value=gold?.6:.62;
+   /* reverb made from a short noise tail */
+   const rv=c.createConvolver(),L=Math.floor(c.sampleRate*1.8),ir=c.createBuffer(2,L,c.sampleRate);for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);for(let i=0;i<L;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/L,2.6);}rv.buffer=ir;
+   const wet=c.createGain();wet.gain.value=.35;out.connect(c.destination);out.connect(rv);rv.connect(wet).connect(c.destination);
+   const env=(g,t0,a,peak,dec)=>{g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(peak,t0+a);g.gain.exponentialRampToValueAtTime(.0005,t0+a+dec);};
+   /* 1. soft deep hit */
+   const k=c.createOscillator(),kg=c.createGain();k.type='sine';k.frequency.setValueAtTime(gold?98:92,t);k.frequency.exponentialRampToValueAtTime(40,t+.6);env(kg,t,.01,.9,1.1);k.connect(kg).connect(out);k.start(t);k.stop(t+1.3);
+   /* 2. rising swell */
+   const sw=c.createOscillator(),sf=c.createBiquadFilter(),sg=c.createGain();sw.type='sawtooth';sw.frequency.value=gold?155.56:146.83;sf.type='lowpass';sf.frequency.setValueAtTime(200,t);sf.frequency.exponentialRampToValueAtTime(2400,t+1);sg.gain.setValueAtTime(0,t);sg.gain.linearRampToValueAtTime(.09,t+.9);sg.gain.exponentialRampToValueAtTime(.0005,t+1.25);sw.connect(sf).connect(sg).connect(out);sw.start(t);sw.stop(t+1.3);
+   /* 3. warm pad chord */
+   const root=gold?311.13:293.66;const chord=gold?[0.5,1,1.26,1.5,1.89,2.52]:[0.5,1,1.25,1.5,1.88,2.25];
+   chord.forEach((m,j)=>{[-6,6].forEach(det=>{const o=c.createOscillator(),f=c.createBiquadFilter(),g=c.createGain();o.type=j<2?'triangle':'sawtooth';o.frequency.value=root*m;o.detune.value=det;f.type='lowpass';f.frequency.value=gold?2600:1800;
+     g.gain.setValueAtTime(0,t+.95);g.gain.linearRampToValueAtTime(j<2?.05:.022,t+1.25);g.gain.setValueAtTime(j<2?.05:.022,t+2.1);g.gain.exponentialRampToValueAtTime(.0005,t+3.2);o.connect(f).connect(g).connect(out);o.start(t+.95);o.stop(t+3.3);});});
+   /* 4. bell melody */
+   const notes=gold?[[2,1.0],[2.52,1.12],[3,1.24],[3.78,1.36],[4,1.5],[5.04,1.7]]:[[2,1.0],[2.5,1.13],[3,1.26],[4,1.42],[3.75,1.62]];
+   notes.forEach(([m,dl])=>{const f0=root*m;[[1,.12],[2.01,.04],[3.02,.02]].forEach(([h,vol])=>{const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=f0*h;env(g,t+dl,.005,vol,gold?1.4:1.1);o.connect(g).connect(out);o.start(t+dl);o.stop(t+dl+1.6);});});
+   /* 5. sparkle */
+   const nb=c.createBuffer(1,Math.floor(c.sampleRate*1.2),c.sampleRate),nd=nb.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=(Math.random()*2-1)*Math.pow(1-i/nd.length,4);const ns=c.createBufferSource();ns.buffer=nb;const hf=c.createBiquadFilter();hf.type='highpass';hf.frequency.value=6000;const ngn=c.createGain();ngn.gain.value=gold?.12:.07;ns.connect(hf).connect(ngn).connect(out);ns.start(t+.98);}
  function toWav(ab){const ch=ab.getChannelData(0),sr=ab.sampleRate,len=ch.length,buf=new ArrayBuffer(44+len*2),v=new DataView(buf);const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
    w(0,'RIFF');v.setUint32(4,36+len*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,len*2,true);
    for(let i=0;i<len;i++){const x=Math.max(-1,Math.min(1,ch[i]));v.setInt16(44+i*2,x*32767,true);}return new Blob([buf],{type:'audio/wav'});}
  const audio=new Audio();window.__rsAudio=audio;audio.preload='auto';audio.setAttribute('playsinline','');
- try{const O=window.OfflineAudioContext||window.webkitOfflineAudioContext;const oc=new O(1,22050*3,22050);design(oc,0.02);const pr=oc.startRendering();
+ try{const O=window.OfflineAudioContext||window.webkitOfflineAudioContext;const oc=new O(1,32000*3.6,32000);design(oc,0.02,GOLD);const pr=oc.startRendering();
    const fin=ab=>{audio.src=URL.createObjectURL(toWav(ab));audio.load();};if(pr&&pr.then)pr.then(fin);else oc.oncomplete=e=>fin(e.renderedBuffer);}catch(_){}
  function sound(){if(played)return;played=true;try{const p=audio.play();if(p&&p.catch)p.catch(()=>{});}catch(_){}}
  let done=false;const finish=()=>{if(done)return;done=true;el.classList.add('out');setTimeout(()=>el.remove(),500);};
