@@ -1056,18 +1056,20 @@ const _renderSnap109=renderSnap;renderSnap=function(){_renderSnap109();const s=$
 @keyframes rsR{0%{transform:scale(3.2);opacity:0;filter:blur(12px)}60%{opacity:1;filter:blur(0)}100%{transform:scale(1);opacity:1}}
 @keyframes rsRest{to{max-width:300px}}@keyframes rsTxt{to{transform:none;opacity:1}}
 @keyframes rsBeam{0%{opacity:0;transform:translate(-50%,-50%) rotate(var(--rot)) scaleY(.1)}40%{opacity:.9}100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--rot)) scaleY(1.2) translateX(140px)}}
-@keyframes rsFlash{0%{opacity:0}25%{opacity:1}100%{opacity:.25}}@keyframes rsTag{to{opacity:1}}`;document.head.appendChild(css);
+@keyframes rsFlash{0%{opacity:0}25%{opacity:1}100%{opacity:.25}}@keyframes rsTag{to{opacity:1}}
+#rsIntro.wait *{animation-play-state:paused!important}#rsIntro .tap{position:absolute;bottom:14%;left:0;right:0;text-align:center;color:#fff;font:700 17px Inter,system-ui;opacity:0;transition:opacity .3s}#rsIntro.wait .tap{opacity:.9;animation:rsPulse 1.4s ease-in-out infinite!important;animation-play-state:running!important}#rsIntro.wait .r{opacity:.7;transform:scale(1);filter:none}@keyframes rsPulse{50%{opacity:.35}}`;document.head.appendChild(css);
  const el=document.createElement('div');el.id='rsIntro';
- el.innerHTML='<i class="beam"></i><i class="beam"></i><i class="beam"></i><i class="beam"></i><div class="flash"></div><div class="wrap" dir="ltr"><span class="r">R</span><span class="rest"><span>-STYLE</span></span></div><div class="tagline">STYLE · AI · FRIENDS</div>';
+ el.innerHTML='<i class="beam"></i><i class="beam"></i><i class="beam"></i><i class="beam"></i><div class="flash"></div><div class="wrap" dir="ltr"><span class="r">R</span><span class="rest"><span>-STYLE</span></span></div><div class="tagline">STYLE · AI · FRIENDS</div><div class="tap">'+({he:'לחצו כדי להיכנס',fr:'Touche pour entrer',ar:'اضغط للدخول'}[(()=>{try{return JSON.parse(localStorage.getItem('rstyle_v3')||'{}').lang}catch(_){return ''}})()]||'Tap to enter')+'</div>';
  document.body.appendChild(el);
  /* original sound: deep "boom" + bright rising chord (made with Web Audio, no music files) */
- let played=false;function sound(){if(played)return;try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const c=new A();if(c.state==='suspended')c.resume();const t=c.currentTime+.05;played=true;
+ let played=false;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(_){}const A=window.AudioContext||window.webkitAudioContext;let c=null;try{c=A?new A():null;}catch(_){}
+ function sound(){if(played||!c)return;try{if(c.state==='suspended')c.resume();const t=c.currentTime+.05;played=true;
    const master=c.createGain();master.gain.value=.55;master.connect(c.destination);
    const boom=c.createOscillator(),bg=c.createGain();boom.type='sine';boom.frequency.setValueAtTime(110,t);boom.frequency.exponentialRampToValueAtTime(38,t+.9);bg.gain.setValueAtTime(0,t);bg.gain.linearRampToValueAtTime(1,t+.02);bg.gain.exponentialRampToValueAtTime(.001,t+1.4);boom.connect(bg).connect(master);boom.start(t);boom.stop(t+1.5);
    const n=c.createBufferSource(),buf=c.createBuffer(1,c.sampleRate*.4,c.sampleRate),d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);n.buffer=buf;const nf=c.createBiquadFilter();nf.type='lowpass';nf.frequency.value=900;const ng=c.createGain();ng.gain.value=.5;n.connect(nf).connect(ng).connect(master);n.start(t);
    [[293.66,1.0],[440,1.06],[587.33,1.12],[880,1.2]].forEach(([f,dl])=>{const o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(0,t+dl);g.gain.linearRampToValueAtTime(.18,t+dl+.04);g.gain.exponentialRampToValueAtTime(.001,t+dl+1.6);o.connect(g).connect(master);o.start(t+dl);o.stop(t+dl+1.7);});
    setTimeout(()=>{try{c.close();}catch(_){}},3500);}catch(_){}}
- sound();
  let done=false;const finish=()=>{if(done)return;done=true;el.classList.add('out');setTimeout(()=>el.remove(),500);};
- el.addEventListener('pointerdown',()=>{if(!played)sound();else finish();});
- setTimeout(finish,2900);})();
+ const go=()=>{el.classList.remove('wait');sound();setTimeout(finish,2900);};
+ if(c&&c.state==='running')go();else{el.classList.add('wait');}
+ el.addEventListener('pointerdown',()=>{if(el.classList.contains('wait'))go();else finish();});})();
