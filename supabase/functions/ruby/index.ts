@@ -1,6 +1,6 @@
 const KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
-const MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"];
-const cfg = (model: string, json: boolean) => ({ maxOutputTokens: json ? 1024 : 400, temperature: 0.8, ...(json ? { responseMimeType: "application/json" } : {}), ...(model.startsWith("gemini-2.0") ? {} : { thinkingConfig: { thinkingBudget: 0 } }) });
+const MODELS = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-flash-lite-latest", "gemini-2.5-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-flash-latest", "gemini-2.5-flash"];
+const cfg = (model: string, json: boolean) => ({ maxOutputTokens: json ? 1024 : 400, temperature: 0.8, ...(json ? { responseMimeType: "application/json" } : {}), ...(model.startsWith("gemini-2.5") ? { thinkingConfig: { thinkingBudget: 0 } } : {}) });
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
         });
         if (r.status === 404) continue;
         if (!(await who)) return out({ error: "Not signed in" });
-        if (!r.ok || !r.body) { const d = await r.json().catch(() => ({})); lastErr = d?.error?.message || "Gemini error"; lastStatus = r.status; if ([429, 500, 503].includes(r.status)) continue; return out({ error: lastErr, status: r.status }); }
+        if (!r.ok || !r.body) { const d = await r.json().catch(() => ({})); lastErr = d?.error?.message || "Gemini error"; lastStatus = r.status; if ([400, 403, 429, 500, 503].includes(r.status)) continue; return out({ error: lastErr, status: r.status }); }
         const dec = new TextDecoder(), enc = new TextEncoder();
         let buf = "";
         const ts = new TransformStream({
@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
       if (r.status === 404) continue;
       if (!(await who)) return out({ error: "Not signed in" });
       const d = await r.json();
-      if (!r.ok) { lastErr = d?.error?.message || "Gemini error"; lastStatus = r.status; if ([429, 500, 503].includes(r.status)) continue; return out({ error: lastErr, status: r.status }); }
+      if (!r.ok) { lastErr = d?.error?.message || "Gemini error"; lastStatus = r.status; if ([400, 403, 429, 500, 503].includes(r.status)) continue; return out({ error: lastErr, status: r.status }); }
       const text = (d?.candidates?.[0]?.content?.parts || []).map((p: any) => p.text || "").join("");
       return out({ text, model });
     }
@@ -89,4 +89,3 @@ Deno.serve(async (req) => {
     return out({ error: String(e) });
   }
 });
-// deploy 2026-11-02T23:19:45
