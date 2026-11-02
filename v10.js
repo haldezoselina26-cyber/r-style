@@ -1137,3 +1137,5 @@ async function pinOf(v){if(/^\d{6}$/.test(v))return v;const h=new Uint8Array(awa
       if(r.error||!d||d.error||!d.access_token){let why=(d&&d.error)||'';if(!why&&r.error){try{const j=await r.error.context.json();why=j.error||j.message||'';}catch(_){why=r.error.message||'';}}er.textContent=t('Wrong code.')+(why&&!/Wrong/.test(why)?' ('+why+')':'');return;}
       const {data:s2,error:e3}=await SB.auth.setSession({access_token:d.access_token,refresh_token:d.refresh_token});if(e3||!s2.session){er.textContent=t('Wrong code.');return;}closeSheet();await signedIn(s2.session);};};
   step1();});})();
+/* v39: my username always follows the server (renamed accounts) */
+{const _al39=afterLogin;afterLogin=async function(){await _al39();try{const {data}=await SB.from('profiles').select('username').eq('id',ME_ID).maybeSingle();if(data&&data.username&&S.profile&&S.profile.username!==data.username){S.profile.username=data.username;save();if(current==='me')renderMe();if(current==='home')show('home');}}catch(_){}};}
