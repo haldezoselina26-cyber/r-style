@@ -1088,3 +1088,5 @@ async function gemStream(body,onText){const {data:{session}}=await SB.auth.getSe
 let rubyWarmAt=0;function rubyWarm(){if(!(REAL&&SB&&ME_ID))return;if(Date.now()-rubyWarmAt<4*60*1000)return;rubyWarmAt=Date.now();fetch(SB_URL+'/functions/v1/ruby',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:'{"warm":true}'}).catch(()=>{});}
 {const _al331=afterLogin;afterLogin=async function(){await _al331();rubyWarm();};const _sh331=show;show=function(id){const r=_sh331.apply(this,arguments);if(id==='ruby')rubyWarm();return r;};
  document.addEventListener('focusin',e=>{if(e.target&&e.target.id==='rubyInput')rubyWarm();});}
+/* version label at the bottom of Settings (to check the phone has the newest app) */
+{const _rs34=renderSettings;renderSettings=function(){_rs34.apply(this,arguments);const b=$('#setBody');if(b&&!b.querySelector('.appVer')){const v=(document.querySelector('script[src*="v10.js"]')?.getAttribute('src')||'').split('v=')[1]||'?';b.insertAdjacentHTML('beforeend',`<p class="appVer muted" style="text-align:center;font-size:12px;margin:18px 0 8px">R-Style · version ${esc(v)}</p>`);}};}
