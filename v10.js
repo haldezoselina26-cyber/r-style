@@ -1228,3 +1228,31 @@ async function turnLoad(){if(!(REAL&&SB&&ME_ID))return;if(Date.now()-iceAt<12*36
     const d=await r.json();if(Array.isArray(d.iceServers)&&d.iceServers.length){ICE=ICE0.concat(d.iceServers);iceAt=Date.now();}}catch(e){console.warn('turn',e);}finally{iceP=null;}})();return iceP;}
 {const _al44=afterLogin;afterLogin=async function(){await _al44();turnLoad();};}
 {const _gs44=gumSafe;gumSafe=async function(){await Promise.race([turnLoad(),new Promise(r=>setTimeout(r,2500))]);return _gs44.apply(this,arguments);};}
+
+/* ====================== v45: creator space shows what was reported + "ignore" ====================== */
+openCreatorSpace=async function(){openSheet(`<h3>👑 ${t('Creator space')}</h3><p class="muted">${t('Reports from users')}</p><div id="repList" style="margin-top:10px"><span class="spin"></span></div>`);
+  const {data,error}=await SB.from('reports').select('*').order('created_at',{ascending:false}).limit(60);const box=$('#repList');if(!box)return;
+  if(error){box.innerHTML=`<p class="muted">${esc(error.message)}</p>`;return;}if(!data||!data.length){box.innerHTML=`<p style="text-align:center;padding:18px">${t('No reports 🎉')}</p>`;return;}
+  const ids=k=>[...new Set(data.filter(r=>r.target_type===k).map(r=>r.target_id))];
+  const pIds=ids('post').map(Number).filter(n=>!isNaN(n)),cIds=ids('comment').map(Number).filter(n=>!isNaN(n)),uIds=ids('user');
+  const [P,C,U]=await Promise.all([pIds.length?SB.from('posts').select('id,author,media,kind,caption').in('id',pIds):{data:[]},cIds.length?SB.from('comments').select('id,author,body').in('id',cIds):{data:[]},uIds.length?SB.from('profiles').select('*').in('id',uIds):{data:[]}]);
+  const posts={},coms={},users={};(P.data||[]).forEach(x=>posts[x.id]=x);(C.data||[]).forEach(x=>coms[x.id]=x);(U.data||[]).forEach(x=>users[x.id]=x);
+  const urls={};const media=(P.data||[]).map(x=>x.media).filter(Boolean);if(media.length){try{const {data:s}=await SB.storage.from('posts').createSignedUrls(media,3600);(s||[]).forEach(o=>{if(o.signedUrl)urls[o.path]=o.signedUrl;});}catch(_){}}
+  const prev=r=>{if(r.target_type==='post'){const p=posts[+r.target_id];if(!p)return `<small class="muted">${t('Already deleted')}</small>`;const u=urls[p.media];
+      return `${u?(p.kind==='video'?`<video src="${esc(u)}" muted playsinline style="width:84px;height:120px;object-fit:cover;border-radius:10px;background:#000"></video>`:`<img src="${esc(u)}" style="width:84px;height:120px;object-fit:cover;border-radius:10px">`):''}${p.caption?`<small>${esc(p.caption)}</small>`:''}`;}
+    if(r.target_type==='comment'){const c=coms[+r.target_id];return c?`<small>“${esc(c.body)}”</small>`:`<small class="muted">${t('Already deleted')}</small>`;}
+    const u=users[r.target_id];return u?`<small>@${esc(u.username||'')}</small>`:'';};
+  box.innerHTML=data.map(r=>`<div class="srow" data-rep="${r.id}" style="flex-direction:column;align-items:stretch;gap:8px"><div class="l"><b>${r.target_type==='post'?'🎬 '+t('Post'):r.target_type==='comment'?'💬 '+t('Comment'):'👤 '+t('User')} · ${esc(r.reason||'')}</b><small class="muted">${new Date(r.created_at).toLocaleString(S.lang||'en',{dateStyle:'short',timeStyle:'short'})}</small></div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${prev(r)}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${r.target_type==='post'&&posts[+r.target_id]?`<button class="btn sm danger" data-rdel="post" data-id="${esc(r.target_id)}">🗑️ ${t('Delete the post')}</button>`:r.target_type==='comment'&&coms[+r.target_id]?`<button class="btn sm danger" data-rdel="comment" data-id="${esc(r.target_id)}">🗑️ ${t('Delete the comment')}</button>`:r.target_type==='user'?`<button class="btn sm" data-rprof="${esc(r.target_id)}">${t('Open profile')}</button>`:''}<button class="chip" data-rign="${r.id}">✓ ${t('Ignore')}</button></div></div>`).join('');
+  box.onclick=async e=>{const d=e.target.closest('[data-rdel]'),pr=e.target.closest('[data-rprof]'),ig=e.target.closest('[data-rign]');
+    if(d){d.disabled=true;const tb=d.dataset.rdel==='post'?'posts':'comments';const id=+d.dataset.id;
+      if(tb==='posts'&&posts[id]&&posts[id].media){try{await SB.storage.from('posts').remove([posts[id].media]);}catch(_){}}
+      const {error}=await SB.from(tb).delete().eq('id',id);if(error){d.textContent=error.message;return;}
+      if(tb==='posts')REALPOSTS=REALPOSTS.filter(p=>String(p.dbid)!==String(id));
+      const same=data.filter(r=>r.target_type===d.dataset.rdel&&String(r.target_id)===String(id)).map(r=>r.id);await SB.from('reports').delete().in('id',same);
+      same.forEach(i=>box.querySelector(`[data-rep="${i}"]`)?.remove());toast('✓ '+t('Done'));}
+    if(ig){ig.disabled=true;const {error}=await SB.from('reports').delete().eq('id',+ig.dataset.rign);if(error){toast(error.message);ig.disabled=false;return;}box.querySelector(`[data-rep="${ig.dataset.rign}"]`)?.remove();}
+    if(!box.querySelector('[data-rep]'))box.innerHTML=`<p style="text-align:center;padding:18px">${t('No reports 🎉')}</p>`;
+    if(pr){const u=pr.dataset.rprof;const {data}=await SB.from('profiles').select('*').eq('id',u).maybeSingle();if(data){closeSheet();openProfile(addReal(data));}}};};
+(function(){const T={'Ignore':['Ignorer','התעלמות','تجاهل'],'Already deleted':['Déjà supprimé','כבר נמחק','تم الحذف']};['fr','he','ar'].forEach((c,i)=>{if(window.I18N&&window.I18N[c])for(const k in T)window.I18N[c][k]=T[k][i];});})();
