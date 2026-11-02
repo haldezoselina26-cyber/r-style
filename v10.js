@@ -1091,31 +1091,6 @@ let rubyWarmAt=0;function rubyWarm(){if(!(REAL&&SB&&ME_ID))return;if(Date.now()-
 /* version label at the bottom of Settings (to check the phone has the newest app) */
 {const _rs34=renderSettings;renderSettings=function(){_rs34.apply(this,arguments);const b=$('#setBody');if(b&&!b.querySelector('.appVer')){const v=(document.querySelector('script[src*="v10.js"]')?.getAttribute('src')||'').split('v=')[1]||'?';b.insertAdjacentHTML('beforeend',`<p class="appVer muted" style="text-align:center;font-size:12px;margin:18px 0 8px">R-Style · version ${esc(v)}</p>`);}};}
 
-/* ====================== v35: log in with a password (no e-mail needed) + create a password in Settings ====================== */
-(function(){const T={'I have a password':['J\'ai un mot de passe','יש לי סיסמה','لدي كلمة مرور'],'Password':['Mot de passe','סיסמה','كلمة المرور'],'Log in':['Se connecter','התחבר','تسجيل الدخول'],
-  'Wrong e-mail or password.':['E-mail ou mot de passe incorrect.','מייל או סיסמה שגויים.','بريد أو كلمة مرور خاطئة.'],'Create a password':['Créer un mot de passe','יצירת סיסמה','إنشاء كلمة مرور'],
-  'Log in next time without waiting for an e-mail':['Connecte-toi la prochaine fois sans attendre d\'e-mail','בפעם הבאה מתחברים בלי לחכות למייל','سجّل الدخول لاحقًا دون انتظار بريد'],
-  'At least 8 characters':['Au moins 8 caractères','לפחות 8 תווים','8 أحرف على الأقل'],'Password saved ✅':['Mot de passe enregistré ✅','הסיסמה נשמרה ✅','تم حفظ كلمة المرور ✅'],'Save':['Enregistrer','שמור','حفظ']};
- ['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});
- const box=$('#emailErr');if(!box)return;box.insertAdjacentHTML('afterend',`<button type="button" id="pwToggle" class="linkBtn" style="border:0;background:none;color:var(--accent);font:700 15px Inter,system-ui;font-style:normal;text-decoration:underline;margin-top:14px;padding:6px 0;display:block" data-t="I have a password"></button>
-  <div id="pwBox" hidden style="margin-top:8px"><input class="field" id="suPw" type="password" autocomplete="current-password" data-tp="Password"><button class="btn primary" id="pwGo" style="margin-top:10px" data-t="Log in"></button><div class="err" id="pwErr"></div></div>`);
- applyLang();
- document.addEventListener('click',async e=>{if(e.target.closest('#pwToggle')){const b=$('#pwBox');b.hidden=!b.hidden;if(!b.hidden)setTimeout(()=>$('#suPw').focus(),50);return;}
-  if(!e.target.closest('#pwGo'))return;e.preventDefault();if(!SB){toast('…');return;}const email=$('#suEmail').value.trim().toLowerCase(),password=$('#suPw').value;const er=$('#pwErr');er.textContent='';
-  if(!email.includes('@')){const code=(email||password).trim();if(!/^[A-Za-z0-9]{6,32}$/.test(code)){er.textContent=t('Wrong code.');return;}er.textContent=t('Checking…');const pin=await pinOf(code);const r=await SB.functions.invoke('pin-login',{body:{pin}});const d=r.data;
-    if(r.error||!d||d.error||!d.access_token){let why=(d&&d.error)||'';if(!why&&r.error){try{const j=await r.error.context.json();why=j.error||j.message||'';}catch(_){why=r.error.message||'';}}er.textContent=t('Wrong code.')+(why&&!/Wrong/.test(why)?' ('+why+')':'');return;}
-    const {data:s2,error:e3}=await SB.auth.setSession({access_token:d.access_token,refresh_token:d.refresh_token});if(e3||!s2.session){er.textContent=t('Wrong code.');return;}er.textContent='';await signedIn(s2.session);return;}
-  const btn=$('#pwGo');btn.disabled=true;const {data,error}=await SB.auth.signInWithPassword({email,password});btn.disabled=false;
-  if(error||!data.session){if(/^[A-Za-z0-9]{6,32}$/.test(password)){const r=await SB.functions.invoke('pin-login',{body:{pin:await pinOf(password)}});const d=r.data;if(!r.error&&d&&d.access_token){const {data:s2}=await SB.auth.setSession({access_token:d.access_token,refresh_token:d.refresh_token});if(s2&&s2.session){await signedIn(s2.session);return;}}
-    let why=(d&&d.error)||'';if(!why&&r.error){try{const j=await r.error.context.json();why=j.error||j.message||'';}catch(_){why=r.error.message||'';}}er.textContent=t('Wrong e-mail or password.')+(why&&!/Wrong/.test(why)?' ('+why+')':'');return;}
-    er.textContent=t('Wrong e-mail or password.');return;}D.email=email;await signedIn(data.session);});})();
-{const _rs35=renderSettings;renderSettings=function(){_rs35.apply(this,arguments);if(!(REAL&&SB&&ME_ID))return;const b=$('#setBody');const ver=b&&b.querySelector('.appVer');if(!b||b.querySelector('#setPw'))return;
-  const row=`<button class="srow" id="setPw" style="width:100%;text-align:start"><div class="l"><b>🔑 ${t('Create a password')}</b><small class="muted">${t('Log in next time without waiting for an e-mail')}</small></div></button>`;
-  if(ver)ver.insertAdjacentHTML('beforebegin',row);else b.insertAdjacentHTML('beforeend',row);
-  $('#setPw').onclick=()=>{openSheet(`<h3>🔑 ${t('Create a password')}</h3><input class="field" id="newPw" type="password" autocomplete="new-password" placeholder="${t('At least 8 characters')}" style="height:48px;margin-top:12px"><button class="btn primary" id="newPwGo" style="margin-top:12px">${t('Save')}</button><div class="err" id="newPwErr"></div>`);
-    $('#newPwGo').onclick=async()=>{const pw=$('#newPw').value;if(pw.length<8){$('#newPwErr').textContent=t('At least 8 characters');return;}$('#newPwGo').disabled=true;const {error}=await SB.auth.updateUser({password:pw});$('#newPwGo').disabled=false;
-      if(error){$('#newPwErr').textContent=error.message;return;}closeSheet();toast(t('Password saved ✅'));};};};}
-
 /* ====================== v36: creator account (badge, Gold forever, reports space) ====================== */
 let STAFF=new Set();const isStaff=id=>STAFF.has(id);
 (function(){const T={'Creator':['Créatrice','יוצרת','المبتكِرة'],'Creator space':['Espace créatrice','מרחב היוצרת','مساحة المبتكِرة'],'Reports from users':['Signalements des utilisateurs','דיווחים של משתמשים','بلاغات المستخدمين'],
@@ -1145,15 +1120,20 @@ async function openCreatorSpace(){openSheet(`<h3>👑 ${t('Creator space')}</h3>
     if(pr){const u=pr.dataset.rprof;const {data}=await SB.from('profiles').select('*').eq('id',u).maybeSingle();if(data){closeSheet();openProfile(addReal(data));}}};}
 
 async function pinOf(v){if(/^\d{6}$/.test(v))return v;const h=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode('rstyle:'+v)));const n=((h[0]<<24)>>>0)+(h[1]<<16)+(h[2]<<8)+h[3];return String(n%1000000).padStart(6,'0');}
-/* ====================== v37: creator code (6 digits typed in the e-mail box = log in) ====================== */
-(function(){const T={'My access code':['Mon code d\'accès','קוד הכניסה שלי','رمز الدخول'],'6 digits to log in without e-mail':['6 chiffres pour te connecter sans e-mail','6 ספרות כדי להיכנס בלי מייל','6 أرقام للدخول دون بريد'],
-  'Code saved ✅':['Code enregistré ✅','הקוד נשמר ✅','تم حفظ الرمز ✅'],'Wrong code.':['Code incorrect.','קוד שגוי.','رمز خاطئ.'],'Checking…':['Vérification…','בודק…','جارٍ التحقق…']};
- ['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
-document.addEventListener('click',async e=>{if(!e.target.closest('#suNext')||current!=='signup'||typeof step==='undefined'||step!==0)return;const v=($('#suEmail')?.value||'').trim();if(!/^[A-Za-z0-9]{6,32}$/.test(v)||!SB)return;
-  e.stopImmediatePropagation();e.preventDefault();const er=$('#emailErr');er.textContent=t('Checking…');
-  const pin=await pinOf(v);const {data,error}=await SB.functions.invoke('pin-login',{body:{pin}});if(error||!data||data.error||!data.access_token){let why=(data&&data.error)||'';if(!why&&error){try{const j=await error.context.json();why=j.error||j.message||'';}catch(_){why=error.message||'';}}er.textContent=/Wrong/.test(why)?t('Wrong code.'):t('Wrong code.')+(why?' ('+why+')':'');return;}
-  const {data:s,error:e2}=await SB.auth.setSession({access_token:data.access_token,refresh_token:data.refresh_token});if(e2||!s.session){er.textContent=t('Wrong code.');return;}er.textContent='';await signedIn(s.session);},true);
-{const _ocs=openCreatorSpace;openCreatorSpace=async function(){await _ocs.apply(this,arguments);const h=$('#sheet h3');if(!h||$('#pinSet'))return;
-  h.insertAdjacentHTML('afterend',`<div class="srow" style="gap:8px;flex-wrap:wrap"><div class="l"><b>🔢 ${t('My access code')}</b><small class="muted">${t('6 digits to log in without e-mail')}</small></div><input class="field" id="pinSet" maxlength="32" placeholder="••••••" style="width:140px;height:42px;text-align:center;letter-spacing:4px"><button class="btn sm primary" id="pinGo">${t('Save')}</button></div>`);
-  $('#pinGo').onclick=async()=>{const v=$('#pinSet').value.trim();if(!/^[A-Za-z0-9]{6,32}$/.test(v)){toast(t('6 digits to log in without e-mail'));return;}$('#pinGo').disabled=true;const {data,error}=await SB.functions.invoke('pin-login',{body:{set:await pinOf(v)}});$('#pinGo').disabled=false;
-    if(error||!data||data.error){toast((data&&data.error)||'Error');return;}$('#pinSet').value='';toast(t('Code saved ✅'));};};}
+/* ====================== v38: "I already have an account" → ID + verification code (creator) ====================== */
+(function(){const T={'I already have an account':['J\'ai déjà un compte','כבר יש לי חשבון','لدي حساب بالفعل'],'Your ID':['Ton identifiant','המזהה שלך','معرّفك'],'Continue':['Continuer','המשך','متابعة'],
+  'Verification code':['Code de vérification','קוד אימות','رمز التحقق'],'Check':['Valider','אישור','تأكيد'],'Wrong code.':['Code incorrect.','קוד שגוי.','رمز خاطئ.'],'Checking…':['Vérification…','בודק…','جارٍ التحقق…'],
+  'Use your e-mail to log in.':['Utilise ton e-mail pour te connecter.','התחבר עם המייל שלך.','استخدم بريدك لتسجيل الدخول.']};
+ ['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});
+ const box=$('#emailErr');if(!box||$('#haveAcc'))return;
+ box.insertAdjacentHTML('afterend',`<button type="button" id="haveAcc" style="border:0;background:none;color:var(--accent);font:700 15px Inter,system-ui;text-decoration:underline;margin-top:14px;padding:6px 0;display:block" data-t="I already have an account"></button>`);applyLang();
+ document.addEventListener('click',e=>{if(!e.target.closest('#haveAcc'))return;let id='';
+  const step1=()=>{openSheet(`<h3>${t('I already have an account')}</h3><input class="field" id="accId" autocomplete="off" autocapitalize="off" placeholder="${t('Your ID')}" style="height:48px;margin-top:12px"><button class="btn primary" id="accNext" style="margin-top:12px">${t('Continue')}</button><div class="err" id="accErr"></div>`);
+    setTimeout(()=>$('#accId').focus(),100);$('#accNext').onclick=()=>{const v=$('#accId').value.trim();if(v.includes('@')){closeSheet();$('#suEmail').value=v;$('#suEmail').dispatchEvent(new Event('input',{bubbles:true}));toast(t('Use your e-mail to log in.'));return;}
+      if(!/^[A-Za-z0-9]{4,32}$/.test(v)){$('#accErr').textContent=t('Wrong code.');return;}id=v;step2();};};
+  const step2=()=>{setSheet(`<h3>${t('Verification code')}</h3><input class="field code" id="accCode" inputmode="numeric" autocomplete="one-time-code" placeholder="•••" style="height:52px;margin-top:12px;text-align:center;letter-spacing:6px;font-size:22px"><button class="btn primary" id="accGo" style="margin-top:12px">${t('Check')}</button><div class="err" id="accErr"></div>`);
+    setTimeout(()=>$('#accCode').focus(),100);$('#accGo').onclick=async()=>{const c=$('#accCode').value.trim();const er=$('#accErr');if(!c){er.textContent=t('Wrong code.');return;}if(!SB){er.textContent='…';return;}
+      er.textContent=t('Checking…');$('#accGo').disabled=true;const r=await SB.functions.invoke('pin-login',{body:{pin:await pinOf(id+'|'+c)}});$('#accGo').disabled=false;const d=r.data;
+      if(r.error||!d||d.error||!d.access_token){let why=(d&&d.error)||'';if(!why&&r.error){try{const j=await r.error.context.json();why=j.error||j.message||'';}catch(_){why=r.error.message||'';}}er.textContent=t('Wrong code.')+(why&&!/Wrong/.test(why)?' ('+why+')':'');return;}
+      const {data:s2,error:e3}=await SB.auth.setSession({access_token:d.access_token,refresh_token:d.refresh_token});if(e3||!s2.session){er.textContent=t('Wrong code.');return;}closeSheet();await signedIn(s2.session);};};
+  step1();});})();
