@@ -1212,3 +1212,10 @@ setInterval(rubyHourly,60*1000);
 {const _sh42=show;show=function(id){const r=_sh42.apply(this,arguments);if(id==='ruby')rubyHourly();return r;};}
 {const f=$('#rubyForm');if(f&&f.onsubmit){const _os42=f.onsubmit;f.onsubmit=async function(e){if(!S.rubyStart)S.rubyStart=Date.now();return _os42.call(this,e);};}}
 (function(){const k='New conversation — Ruby remembers the important things';const v=['Nouvelle conversation — Ruby se souvient des choses importantes','שיחה חדשה — רובי זוכרת את הדברים החשובים','محادثة جديدة — روبي تتذكر الأشياء المهمة'];['fr','he','ar'].forEach((c,i)=>{if(window.I18N&&window.I18N[c])window.I18N[c][k]=v[i];});})();
+
+/* ====================== v43: privacy policy and terms of use in Settings ====================== */
+{const _rs43=renderSettings;renderSettings=function(){_rs43.apply(this,arguments);const b=$('#setBody');if(!b||b.querySelector('#legalP'))return;
+  const l=['he','fr'].includes(S.lang)?S.lang:'en';
+  const html=`<div class="sect">${t('Legal')}</div><a class="srow" id="legalP" href="privacy.html?l=${l}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><div class="l"><b>🔒 ${t('Privacy policy')}</b></div><span class="muted">›</span></a><a class="srow" id="legalT" href="terms.html?l=${l}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><div class="l"><b>📄 ${t('Terms of use')}</b></div><span class="muted">›</span></a>`;
+  const anchor=b.querySelector('#creatorSpace')||b.querySelector('.appVer');if(anchor)anchor.insertAdjacentHTML('beforebegin',html);else b.insertAdjacentHTML('beforeend',html);};}
+(function(){const T={'Legal':['Mentions légales','מסמכים משפטיים','قانوني'],'Privacy policy':['Politique de confidentialité','מדיניות פרטיות','سياسة الخصوصية'],'Terms of use':['Conditions d\'utilisation','תנאי שימוש','شروط الاستخدام']};['fr','he','ar'].forEach((c,i)=>{if(window.I18N&&window.I18N[c])for(const k in T)window.I18N[c][k]=T[k][i];});})();
