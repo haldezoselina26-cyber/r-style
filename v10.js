@@ -1161,3 +1161,30 @@ document.addEventListener('click',e=>{const a=e.target.closest('#meBody .meTop .
   const bg=(a.style.backgroundImage||getComputedStyle(a).backgroundImage||'');const m=bg.match(/url\(["']?(.*?)["']?\)/);const w=document.createElement('div');w.id='photoFull';
   w.innerHTML=(m?`<img src="${m[1]}" alt="">`:`<div class="big" style="background:${a.style.background||getComputedStyle(a).backgroundColor}">${esc(a.textContent.trim())}</div>`)+`<button class="x" aria-label="Close">${SV(ICONS.x)}</button>`;
   w.onclick=()=>w.remove();document.body.appendChild(w);},true);
+
+/* ====================== v41: welcome video after sign-up, then optional detailed tutorial ====================== */
+(function(){const T={'Skip':['Passer','דלג','تخطي'],'Tap for sound':['Touche pour le son','לחצו לקול','اضغط للصوت'],'Did you understand everything?':['Tu as tout compris ?','הבנת הכול?','هل فهمت كل شيء؟'],
+  'Show me in detail':['Montre-moi en détail','תראו לי בפירוט','أرني بالتفصيل'],'Yes, let\'s go!':['Oui, c\'est parti !','כן, יאללה!','نعم، هيا!'],'Welcome video':['Vidéo de présentation','סרטון הסבר','فيديو الترحيب'],
+  'Watch how R-Style works again':['Revoir comment marche R-Style','לראות שוב איך R-Style עובד','شاهد مرة أخرى كيف يعمل R-Style'],'Detailed tutorial with the real buttons':['Tutoriel détaillé avec les vrais boutons','הדרכה מפורטת עם הכפתורים האמיתיים','شرح مفصّل بالأزرار الحقيقية'],'Tutorial':['Tutoriel','הדרכה','شرح']};
+ ['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});
+ const css=document.createElement('style');css.textContent=`#guideV{position:fixed;inset:0;z-index:99990;background:#000;display:flex;align-items:center;justify-content:center;animation:mmIn .25s ease-out}
+#guideV video{width:100%;height:100%;object-fit:contain;background:#000}
+#guideV .gx{position:absolute;top:calc(env(safe-area-inset-top) + 14px);right:14px;border:0;border-radius:18px;padding:8px 14px;background:rgba(255,255,255,.2);color:#fff;font:600 14px Inter,system-ui;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+#guideV .gs{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 30px);left:50%;transform:translateX(-50%);border:0;border-radius:22px;padding:10px 18px;background:#fff;color:#111;font:700 14px Inter,system-ui}
+#guideV .gend{position:absolute;inset:0;background:rgba(0,0,0,.72);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px;text-align:center;color:#fff;animation:mmIn .25s}
+#guideV .gend h3{font:800 24px Inter,system-ui;margin:0 0 6px}#guideV .gend button{width:min(320px,90%);border:0;border-radius:16px;padding:15px;font:700 16px Inter,system-ui}
+#guideV .gend .y{background:var(--accent);color:#fff}#guideV .gend .n{background:rgba(255,255,255,.16);color:#fff}`;document.head.appendChild(css);})();
+function playGuide(src,onEnd){const old=$('#guideV');if(old)old.remove();const w=document.createElement('div');w.id='guideV';
+  w.innerHTML=`<video src="${src}" playsinline preload="auto"></video><button class="gx">${t('Skip')} ✕</button>`;document.body.appendChild(w);const v=w.querySelector('video');
+  const done=()=>{try{v.pause();}catch(_){}onEnd&&onEnd(w);};w.querySelector('.gx').onclick=done;v.onended=done;
+  v.muted=false;const pr=v.play();if(pr&&pr.catch)pr.catch(()=>{v.muted=true;v.play().catch(()=>{});const s=document.createElement('button');s.className='gs';s.textContent='🔊 '+t('Tap for sound');s.onclick=()=>{v.muted=false;s.remove();};w.appendChild(s);});
+  v.onclick=()=>{if(v.muted){v.muted=false;w.querySelector('.gs')?.remove();}};return w;}
+function playIntro(){S.introSeen=true;save();playGuide('promo/intro.mp4',w=>{const e=document.createElement('div');e.className='gend';
+  e.innerHTML=`<h3>${t('Did you understand everything?')}</h3><button class="n">✅ ${t('Yes, let\'s go!')}</button><button class="y">🎬 ${t('Show me in detail')}</button>`;w.appendChild(e);w.querySelector('.gx')?.remove();w.querySelector('.gs')?.remove();
+  e.querySelector('.n').onclick=()=>w.remove();e.querySelector('.y').onclick=()=>{w.remove();playGuide('promo/tutorial.mp4',w2=>w2.remove());};});}
+{const _sh41=show;show=function(id){const r=_sh41.apply(this,arguments);
+  if(id==='home'&&S.profile&&!S.introSeen&&!$('#guideV')){const j=Date.parse(S.profile.joined||'');if(!isNaN(j)&&Date.now()-j<3*864e5)setTimeout(()=>{if(current==='home'&&!S.introSeen)playIntro();},700);else{S.introSeen=true;save();}}return r;};}
+{const _rs41=renderSettings;renderSettings=function(){_rs41.apply(this,arguments);const b=$('#setBody');if(!b||b.querySelector('#gIntro'))return;
+  const html=`<div class="sect">${t('Tutorial')}</div><button class="srow" id="gIntro" style="width:100%;text-align:start"><div class="l"><b>🎬 ${t('Welcome video')}</b><small class="muted">${t('Watch how R-Style works again')}</small></div></button><button class="srow" id="gTut" style="width:100%;text-align:start"><div class="l"><b>📱 ${t('Tutorial')}</b><small class="muted">${t('Detailed tutorial with the real buttons')}</small></div></button>`;
+  const anchor=b.querySelector('#creatorSpace')||b.querySelector('.appVer');if(anchor)anchor.insertAdjacentHTML('beforebegin',html);else b.insertAdjacentHTML('beforeend',html);
+  $('#gIntro').onclick=()=>playIntro();$('#gTut').onclick=()=>playGuide('promo/tutorial.mp4',w=>w.remove());};}
