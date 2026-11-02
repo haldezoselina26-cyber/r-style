@@ -1,0 +1,7 @@
+project_id = "gnctjjexhzeavxnpbckm"
+
+[functions.ruby]
+verify_jwt = false
+
+[functions.pin-login]
+verify_jwt = false
