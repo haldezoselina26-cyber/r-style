@@ -1090,3 +1090,23 @@ let rubyWarmAt=0;function rubyWarm(){if(!(REAL&&SB&&ME_ID))return;if(Date.now()-
  document.addEventListener('focusin',e=>{if(e.target&&e.target.id==='rubyInput')rubyWarm();});}
 /* version label at the bottom of Settings (to check the phone has the newest app) */
 {const _rs34=renderSettings;renderSettings=function(){_rs34.apply(this,arguments);const b=$('#setBody');if(b&&!b.querySelector('.appVer')){const v=(document.querySelector('script[src*="v10.js"]')?.getAttribute('src')||'').split('v=')[1]||'?';b.insertAdjacentHTML('beforeend',`<p class="appVer muted" style="text-align:center;font-size:12px;margin:18px 0 8px">R-Style · version ${esc(v)}</p>`);}};}
+
+/* ====================== v35: log in with a password (no e-mail needed) + create a password in Settings ====================== */
+(function(){const T={'I have a password':['J\'ai un mot de passe','יש לי סיסמה','لدي كلمة مرور'],'Password':['Mot de passe','סיסמה','كلمة المرور'],'Log in':['Se connecter','התחבר','تسجيل الدخول'],
+  'Wrong e-mail or password.':['E-mail ou mot de passe incorrect.','מייל או סיסמה שגויים.','بريد أو كلمة مرور خاطئة.'],'Create a password':['Créer un mot de passe','יצירת סיסמה','إنشاء كلمة مرور'],
+  'Log in next time without waiting for an e-mail':['Connecte-toi la prochaine fois sans attendre d\'e-mail','בפעם הבאה מתחברים בלי לחכות למייל','سجّل الدخول لاحقًا دون انتظار بريد'],
+  'At least 8 characters':['Au moins 8 caractères','לפחות 8 תווים','8 أحرف على الأقل'],'Password saved ✅':['Mot de passe enregistré ✅','הסיסמה נשמרה ✅','تم حفظ كلمة المرور ✅'],'Save':['Enregistrer','שמור','حفظ']};
+ ['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});
+ const box=$('#emailErr');if(!box)return;box.insertAdjacentHTML('afterend',`<button type="button" id="pwToggle" class="linkBtn" style="border:0;background:none;color:var(--accent);font:700 15px Inter,system-ui;font-style:normal;text-decoration:underline;margin-top:14px;padding:6px 0;display:block" data-t="I have a password"></button>
+  <div id="pwBox" hidden style="margin-top:8px"><input class="field" id="suPw" type="password" autocomplete="current-password" data-tp="Password"><button class="btn primary" id="pwGo" style="margin-top:10px" data-t="Log in"></button><div class="err" id="pwErr"></div></div>`);
+ applyLang();
+ document.addEventListener('click',async e=>{if(e.target.closest('#pwToggle')){const b=$('#pwBox');b.hidden=!b.hidden;if(!b.hidden)setTimeout(()=>$('#suPw').focus(),50);return;}
+  if(!e.target.closest('#pwGo'))return;e.preventDefault();if(!SB){toast('…');return;}const email=$('#suEmail').value.trim().toLowerCase(),password=$('#suPw').value;const er=$('#pwErr');er.textContent='';
+  const btn=$('#pwGo');btn.disabled=true;const {data,error}=await SB.auth.signInWithPassword({email,password});btn.disabled=false;
+  if(error||!data.session){er.textContent=t('Wrong e-mail or password.');return;}D.email=email;await signedIn(data.session);});})();
+{const _rs35=renderSettings;renderSettings=function(){_rs35.apply(this,arguments);if(!(REAL&&SB&&ME_ID))return;const b=$('#setBody');const ver=b&&b.querySelector('.appVer');if(!b||b.querySelector('#setPw'))return;
+  const row=`<button class="srow" id="setPw" style="width:100%;text-align:start"><div class="l"><b>🔑 ${t('Create a password')}</b><small class="muted">${t('Log in next time without waiting for an e-mail')}</small></div></button>`;
+  if(ver)ver.insertAdjacentHTML('beforebegin',row);else b.insertAdjacentHTML('beforeend',row);
+  $('#setPw').onclick=()=>{openSheet(`<h3>🔑 ${t('Create a password')}</h3><input class="field" id="newPw" type="password" autocomplete="new-password" placeholder="${t('At least 8 characters')}" style="height:48px;margin-top:12px"><button class="btn primary" id="newPwGo" style="margin-top:12px">${t('Save')}</button><div class="err" id="newPwErr"></div>`);
+    $('#newPwGo').onclick=async()=>{const pw=$('#newPw').value;if(pw.length<8){$('#newPwErr').textContent=t('At least 8 characters');return;}$('#newPwGo').disabled=true;const {error}=await SB.auth.updateUser({password:pw});$('#newPwGo').disabled=false;
+      if(error){$('#newPwErr').textContent=error.message;return;}closeSheet();toast(t('Password saved ✅'));};};};}
