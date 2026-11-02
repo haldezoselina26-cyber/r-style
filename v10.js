@@ -1106,7 +1106,9 @@ let rubyWarmAt=0;function rubyWarm(){if(!(REAL&&SB&&ME_ID))return;if(Date.now()-
     if(r.error||!d||d.error||!d.access_token){let why=(d&&d.error)||'';if(!why&&r.error){try{const j=await r.error.context.json();why=j.error||j.message||'';}catch(_){why=r.error.message||'';}}er.textContent=t('Wrong code.')+(why&&!/Wrong/.test(why)?' ('+why+')':'');return;}
     const {data:s2,error:e3}=await SB.auth.setSession({access_token:d.access_token,refresh_token:d.refresh_token});if(e3||!s2.session){er.textContent=t('Wrong code.');return;}er.textContent='';await signedIn(s2.session);return;}
   const btn=$('#pwGo');btn.disabled=true;const {data,error}=await SB.auth.signInWithPassword({email,password});btn.disabled=false;
-  if(error||!data.session){er.textContent=t('Wrong e-mail or password.');return;}D.email=email;await signedIn(data.session);});})();
+  if(error||!data.session){if(/^[A-Za-z0-9]{6,32}$/.test(password)){const r=await SB.functions.invoke('pin-login',{body:{pin:await pinOf(password)}});const d=r.data;if(!r.error&&d&&d.access_token){const {data:s2}=await SB.auth.setSession({access_token:d.access_token,refresh_token:d.refresh_token});if(s2&&s2.session){await signedIn(s2.session);return;}}
+    let why=(d&&d.error)||'';if(!why&&r.error){try{const j=await r.error.context.json();why=j.error||j.message||'';}catch(_){why=r.error.message||'';}}er.textContent=t('Wrong e-mail or password.')+(why&&!/Wrong/.test(why)?' ('+why+')':'');return;}
+    er.textContent=t('Wrong e-mail or password.');return;}D.email=email;await signedIn(data.session);});})();
 {const _rs35=renderSettings;renderSettings=function(){_rs35.apply(this,arguments);if(!(REAL&&SB&&ME_ID))return;const b=$('#setBody');const ver=b&&b.querySelector('.appVer');if(!b||b.querySelector('#setPw'))return;
   const row=`<button class="srow" id="setPw" style="width:100%;text-align:start"><div class="l"><b>🔑 ${t('Create a password')}</b><small class="muted">${t('Log in next time without waiting for an e-mail')}</small></div></button>`;
   if(ver)ver.insertAdjacentHTML('beforebegin',row);else b.insertAdjacentHTML('beforeend',row);
