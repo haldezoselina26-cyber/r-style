@@ -1084,3 +1084,7 @@ async function gemStream(body,onText){const {data:{session}}=await SB.auth.getSe
     try{const text=await gemStream(body,opts.onText);return {text};}catch(e){if(e.code==='rate_limited')throw e;return G0(msgs,opts);}};
   Object.assign(G,G0);G.json=G0.json;G.limits=G0.limits;G.gemini=true;return G;};
  if(AI&&AI.gemini){AI=null;enableGemini();}}
+/* v33.1 keep Ruby awake: a tiny call when the app opens and when Ruby is opened (no waiting on the first question) */
+let rubyWarmAt=0;function rubyWarm(){if(!(REAL&&SB&&ME_ID))return;if(Date.now()-rubyWarmAt<4*60*1000)return;rubyWarmAt=Date.now();fetch(SB_URL+'/functions/v1/ruby',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:'{"warm":true}'}).catch(()=>{});}
+{const _al331=afterLogin;afterLogin=async function(){await _al331();rubyWarm();};const _sh331=show;show=function(id){const r=_sh331.apply(this,arguments);if(id==='ruby')rubyWarm();return r;};
+ document.addEventListener('focusin',e=>{if(e.target&&e.target.id==='rubyInput')rubyWarm();});}
