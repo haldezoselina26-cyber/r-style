@@ -1209,8 +1209,7 @@ function openPerks(){
     ['trend','Monthly trends','Your personal style report',()=>{closeSheet();openTrend();}],
     ['bag','What\'s missing','The pieces that unlock the most outfits',()=>{closeSheet();openMissing();}],
     ['sparkle','Unlimited Ruby','Ask as much as you want',()=>{closeSheet();show('ruby');}],
-    ['mic','Voice messages','In all your chats',()=>{closeSheet();show('chat');}],
-    ['trophy','Monthly contest','Win the crown on your profile',()=>openContest()],
+    ['palette','Black & gold app','Gold colors, white & gold mode, accent colors',()=>{closeSheet();openOverlay('settings');renderSettings();}],
     ['crown','Gold profile','Gold frame and badge',()=>{closeSheet();show('me');}]];
   openSheet(`<div style="text-align:center"><h2 class="goldtxt" style="margin:0;font-size:30px">Gold Style</h2><p class="muted" style="margin:4px 0 8px;font-size:13px">${S.trialEnd>Date.now()?t('Free trial until {d}',{d:new Date(S.trialEnd).toLocaleDateString()}):(S.plan==='year'?t('100 ₪/year'):t('10 ₪/month'))}</p></div>
    ${P.map((p,i)=>`<button class="perk" data-perk="${i}"><span class="e">${SV(ICONS[p[0]])}</span><div><b>${t(p[1])}</b><small>${t(p[2])}</small></div><span class="go">${t('Open')}</span></button>`).join('')}`);

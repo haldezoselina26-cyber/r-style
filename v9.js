@@ -553,7 +553,7 @@ renderSettings=function(){_renderSettings();const body=$('#setBody');
     $('#loYes').onclick=()=>{S.profile=null;save();location.reload();};$('#loNo').onclick=closeSheet;};};
 
 /* perks list: voice messages are for everyone now; daily challenge is Gold */
-(function(){const _applyLang=applyLang;applyLang=function(){_applyLang();$('#vipList').innerHTML=[['avatar','Full 3D avatar: all rooms, hairstyles, makeup and moves'],['calendar','Ruby plans your whole week'],['trend','Monthly trend report'],['bag','What\'s missing in my wardrobe'],['sparkle','Unlimited Ruby'],['flame','DAILY CHALLENGE'],['filters','Gold filter'],['crown','Gold profile + crown'],['trophy','Monthly contests']].map(([e,s])=>`<li>${ic(e)}${t(s)}</li>`).join('');};})();
+(function(){const _applyLang=applyLang;applyLang=function(){_applyLang();$('#vipList').innerHTML=[['avatar','Full 3D avatar: all rooms, hairstyles, makeup and moves'],['calendar','Ruby plans your whole week'],['trend','Monthly trend report'],['bag','What\'s missing in my wardrobe'],['sparkle','Unlimited Ruby'],['palette','Black & gold app, white & gold mode'],['crown','Gold profile + crown']].map(([e,s])=>`<li>${ic(e)}${t(s)}</li>`).join('');};})();
 
 /* scrolling areas for new screens */
 document.addEventListener('touchmove',e=>{if(e.target.closest('#ciBody,.fring,.thGrid,#peek .pkMsgs'))e.stopPropagation();},{capture:true,passive:true});
