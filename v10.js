@@ -1110,3 +1110,31 @@ let rubyWarmAt=0;function rubyWarm(){if(!(REAL&&SB&&ME_ID))return;if(Date.now()-
   $('#setPw').onclick=()=>{openSheet(`<h3>🔑 ${t('Create a password')}</h3><input class="field" id="newPw" type="password" autocomplete="new-password" placeholder="${t('At least 8 characters')}" style="height:48px;margin-top:12px"><button class="btn primary" id="newPwGo" style="margin-top:12px">${t('Save')}</button><div class="err" id="newPwErr"></div>`);
     $('#newPwGo').onclick=async()=>{const pw=$('#newPw').value;if(pw.length<8){$('#newPwErr').textContent=t('At least 8 characters');return;}$('#newPwGo').disabled=true;const {error}=await SB.auth.updateUser({password:pw});$('#newPwGo').disabled=false;
       if(error){$('#newPwErr').textContent=error.message;return;}closeSheet();toast(t('Password saved ✅'));};};};}
+
+/* ====================== v36: creator account (badge, Gold forever, reports space) ====================== */
+let STAFF=new Set();const isStaff=id=>STAFF.has(id);
+(function(){const T={'Creator':['Créatrice','יוצרת','المبتكِرة'],'Creator space':['Espace créatrice','מרחב היוצרת','مساحة المبتكِرة'],'Reports from users':['Signalements des utilisateurs','דיווחים של משתמשים','بلاغات المستخدمين'],
+  'No reports 🎉':['Aucun signalement 🎉','אין דיווחים 🎉','لا بلاغات 🎉'],'Delete the post':['Supprimer le post','מחק את הפוסט','حذف المنشور'],'Delete the comment':['Supprimer le commentaire','מחק את התגובה','حذف التعليق'],'Done':['Fait','בוצע','تم'],'Post':['Post','פוסט','منشور'],'Comment':['Commentaire','תגובה','تعليق'],'User':['Utilisateur','משתמש','مستخدم'],'Open profile':['Voir le profil','פתח פרופיל','فتح الملف']};
+ ['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});
+ const css=document.createElement('style');css.textContent=`.creatorChip{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(90deg,#E11D2E,#D4AF37);color:#fff;font:700 12px Inter,system-ui;padding:4px 10px;border-radius:12px;margin:6px 4px 0}
+.vcheck{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#1D9BF0;color:#fff;font-size:11px;font-weight:800;vertical-align:-3px;margin-inline-start:4px}`;document.head.appendChild(css);})();
+async function loadStaff(){if(!(REAL&&SB))return;try{const {data,error}=await SB.from('staff').select('user_id');if(error)return;STAFF=new Set((data||[]).map(x=>rid(x.user_id)));
+  if(ME_ID&&STAFF.has(rid(ME_ID))){S.creator=true;if(!S.vip){S.vip=true;S.paid=true;S.trialEnd=0;save();applyTheme();}}else if(S.creator){S.creator=false;save();}
+  if(current==='me')renderMe();}catch(_){}}
+{const _al36=afterLogin;afterLogin=async function(){await _al36();loadStaff();};}
+/* Gold can't be switched off by mistake on the creator account */
+{const _rs36=renderSettings;renderSettings=function(){_rs36.apply(this,arguments);if(!S.creator)return;const vo=$('#vipOff');if(vo)vo.closest('.srow')?.remove();const b=$('#setBody');if(!b||b.querySelector('#creatorSpace'))return;
+  b.insertAdjacentHTML('afterbegin',`<button class="srow" id="creatorSpace" style="width:100%;text-align:start"><div class="l"><b>👑 ${t('Creator space')}</b><small class="muted">${t('Reports from users')}</small></div></button>`);$('#creatorSpace').onclick=openCreatorSpace;};}
+const _mebadge=()=>`<span class="creatorChip">✨ ${t('Creator')} <span class="vcheck">✓</span></span>`;
+{const _rm36=renderMe;renderMe=function(){_rm36.apply(this,arguments);if(!S.creator)return;const h=$('#meHandle');if(h&&!h.querySelector('.vcheck'))h.insertAdjacentHTML('beforeend','<span class="vcheck">✓</span>');const top=$('#meBody .meTop > div');if(top&&!top.querySelector('.creatorChip'))top.insertAdjacentHTML('beforeend',_mebadge());};}
+{const _op36=openProfile;openProfile=function(id){_op36.apply(this,arguments);if(!isStaff(id))return;const h=$('#profBody .phead h2');if(h&&!h.querySelector('.vcheck'))h.insertAdjacentHTML('beforeend','<span class="vcheck">✓</span>');const sc=$('#profBody .aiscore');if(sc&&!$('#profBody .creatorChip'))sc.insertAdjacentHTML('afterend',_mebadge());};}
+/* blue check next to the creator's name in Shorts */
+{const _rf36=renderFeed;renderFeed=function(){const r=_rf36.apply(this,arguments);if(STAFF.size)$$('#feed .short').forEach(el=>{const p=REALPOSTS.find(x=>x.id===el.dataset.id);if(p&&p.u&&isStaff(p.u)){const n=el.querySelector('.who b, .by b, .uname, .meta b');if(n&&!n.querySelector('.vcheck'))n.insertAdjacentHTML('beforeend','<span class="vcheck">✓</span>');}});return r;};}
+async function openCreatorSpace(){openSheet(`<h3>👑 ${t('Creator space')}</h3><p class="muted">${t('Reports from users')}</p><div id="repList" style="margin-top:10px"><span class="spin"></span></div>`);
+  const {data,error}=await SB.from('reports').select('*').order('created_at',{ascending:false}).limit(60);const box=$('#repList');if(!box)return;
+  if(error){box.textContent=error.message;return;}if(!data||!data.length){box.innerHTML=`<p style="text-align:center;padding:18px">${t('No reports 🎉')}</p>`;return;}
+  box.innerHTML=data.map(r=>`<div class="srow" style="align-items:flex-start;gap:10px"><div class="l"><b>${r.target_type==='post'?'🎬 '+t('Post'):r.target_type==='comment'?'💬 '+t('Comment'):'👤 '+t('User')} · ${esc(r.reason||'')}</b><small class="muted">${new Date(r.created_at).toLocaleString(S.lang||'en',{dateStyle:'short',timeStyle:'short'})}</small></div>
+    ${r.target_type==='post'?`<button class="btn sm" data-rdel="post" data-id="${esc(r.target_id)}">${t('Delete the post')}</button>`:r.target_type==='comment'?`<button class="btn sm" data-rdel="comment" data-id="${esc(r.target_id)}">${t('Delete the comment')}</button>`:`<button class="btn sm" data-rprof="${esc(r.target_id)}">${t('Open profile')}</button>`}</div>`).join('');
+  box.onclick=async e=>{const d=e.target.closest('[data-rdel]');const pr=e.target.closest('[data-rprof]');
+    if(d){d.disabled=true;const tb=d.dataset.rdel==='post'?'posts':'comments';const {error}=await SB.from(tb).delete().eq('id',+d.dataset.id);d.textContent=error?error.message:'✓ '+t('Done');if(!error&&tb==='posts'){REALPOSTS=REALPOSTS.filter(p=>String(p.dbid)!==d.dataset.id);}}
+    if(pr){const u=pr.dataset.rprof;const {data}=await SB.from('profiles').select('*').eq('id',u).maybeSingle();if(data){closeSheet();openProfile(addReal(data));}}};}
