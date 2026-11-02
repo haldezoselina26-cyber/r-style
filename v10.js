@@ -1171,16 +1171,18 @@ document.addEventListener('click',e=>{const a=e.target.closest('#meBody .meTop .
 #guideV video{width:100%;height:100%;object-fit:contain;background:#000}
 #guideV .gx{position:absolute;top:calc(env(safe-area-inset-top) + 14px);right:14px;border:0;border-radius:18px;padding:8px 14px;background:rgba(255,255,255,.2);color:#fff;font:600 14px Inter,system-ui;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 #guideV .gs{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 30px);left:50%;transform:translateX(-50%);border:0;border-radius:22px;padding:10px 18px;background:#fff;color:#111;font:700 14px Inter,system-ui}
+#guideV .gskip{position:absolute;top:calc(env(safe-area-inset-top) + 14px);left:14px;display:flex;gap:8px}#guideV .gskip button{border:0;border-radius:18px;padding:8px 12px;background:rgba(255,255,255,.2);color:#fff;font:700 14px Inter,system-ui;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 #guideV .gend{position:absolute;inset:0;background:rgba(0,0,0,.72);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px;text-align:center;color:#fff;animation:mmIn .25s}
 #guideV .gend h3{font:800 24px Inter,system-ui;margin:0 0 6px}#guideV .gend button{width:min(320px,90%);border:0;border-radius:16px;padding:15px;font:700 16px Inter,system-ui}
 #guideV .gend .y{background:var(--accent);color:#fff}#guideV .gend .n{background:rgba(255,255,255,.16);color:#fff}`;document.head.appendChild(css);})();
 function playGuide(src,onEnd){const old=$('#guideV');if(old)old.remove();const w=document.createElement('div');w.id='guideV';
-  w.innerHTML=`<video src="${src}" playsinline preload="auto"></video><button class="gx">${t('Skip')} ✕</button>`;document.body.appendChild(w);const v=w.querySelector('video');
+  w.innerHTML=`<video src="${src}" playsinline preload="auto" controls></video><button class="gx">${t('Skip')} ✕</button><div class="gskip"><button data-gs="-10">⏪ 10</button><button data-gs="10">10 ⏩</button></div>`;document.body.appendChild(w);const v=w.querySelector('video');
+  w.querySelectorAll('[data-gs]').forEach(x=>x.onclick=e=>{e.stopPropagation();v.currentTime=Math.max(0,Math.min((v.duration||0)-0.2,v.currentTime+(+x.dataset.gs)));});
   const done=()=>{try{v.pause();}catch(_){}onEnd&&onEnd(w);};w.querySelector('.gx').onclick=done;v.onended=done;
   v.muted=false;const pr=v.play();if(pr&&pr.catch)pr.catch(()=>{v.muted=true;v.play().catch(()=>{});const s=document.createElement('button');s.className='gs';s.textContent='🔊 '+t('Tap for sound');s.onclick=()=>{v.muted=false;s.remove();};w.appendChild(s);});
   v.onclick=()=>{if(v.muted){v.muted=false;w.querySelector('.gs')?.remove();}};return w;}
 function playIntro(){S.introSeen=true;save();playGuide('promo/intro.mp4',w=>{const e=document.createElement('div');e.className='gend';
-  e.innerHTML=`<h3>${t('Did you understand everything?')}</h3><button class="n">✅ ${t('Yes, let\'s go!')}</button><button class="y">🎬 ${t('Show me in detail')}</button>`;w.appendChild(e);w.querySelector('.gx')?.remove();w.querySelector('.gs')?.remove();
+  e.innerHTML=`<h3>${t('Did you understand everything?')}</h3><button class="n">✅ ${t('Yes, let\'s go!')}</button><button class="y">🎬 ${t('Show me in detail')}</button>`;w.appendChild(e);w.querySelector('.gx')?.remove();w.querySelector('.gskip')?.remove();w.querySelector('.gs')?.remove();
   e.querySelector('.n').onclick=()=>w.remove();e.querySelector('.y').onclick=()=>{w.remove();playGuide('promo/tutorial.mp4',w2=>w2.remove());};});}
 {const _sh41=show;show=function(id){const r=_sh41.apply(this,arguments);
   if(id==='home'&&S.profile&&!S.introSeen&&!$('#guideV')){const j=Date.parse(S.profile.joined||'');if(!isNaN(j)&&Date.now()-j<3*864e5)setTimeout(()=>{if(current==='home'&&!S.introSeen)playIntro();},700);else{S.introSeen=true;save();}}return r;};}
