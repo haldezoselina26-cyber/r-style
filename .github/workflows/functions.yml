@@ -15,6 +15,6 @@ jobs:
         with:
           version: latest
       - name: Deploy ruby
-        run: supabase functions deploy ruby --project-ref gnctjjexhzeavxnpbckm --no-verify-jwt --use-api
+        run: supabase functions deploy ruby --project-ref gnctjjexhzeavxnpbckm --no-verify-jwt --use-api --yes
       - name: Deploy pin-login
-        run: supabase functions deploy pin-login --project-ref gnctjjexhzeavxnpbckm --no-verify-jwt --use-api
+        run: supabase functions deploy pin-login --project-ref gnctjjexhzeavxnpbckm --no-verify-jwt --use-api --yes
