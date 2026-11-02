@@ -1138,3 +1138,16 @@ async function openCreatorSpace(){openSheet(`<h3>👑 ${t('Creator space')}</h3>
   box.onclick=async e=>{const d=e.target.closest('[data-rdel]');const pr=e.target.closest('[data-rprof]');
     if(d){d.disabled=true;const tb=d.dataset.rdel==='post'?'posts':'comments';const {error}=await SB.from(tb).delete().eq('id',+d.dataset.id);d.textContent=error?error.message:'✓ '+t('Done');if(!error&&tb==='posts'){REALPOSTS=REALPOSTS.filter(p=>String(p.dbid)!==d.dataset.id);}}
     if(pr){const u=pr.dataset.rprof;const {data}=await SB.from('profiles').select('*').eq('id',u).maybeSingle();if(data){closeSheet();openProfile(addReal(data));}}};}
+
+/* ====================== v37: creator code (6 digits typed in the e-mail box = log in) ====================== */
+(function(){const T={'My access code':['Mon code d\'accès','קוד הכניסה שלי','رمز الدخول'],'6 digits to log in without e-mail':['6 chiffres pour te connecter sans e-mail','6 ספרות כדי להיכנס בלי מייל','6 أرقام للدخول دون بريد'],
+  'Code saved ✅':['Code enregistré ✅','הקוד נשמר ✅','تم حفظ الرمز ✅'],'Wrong code.':['Code incorrect.','קוד שגוי.','رمز خاطئ.'],'Checking…':['Vérification…','בודק…','جارٍ التحقق…']};
+ ['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
+document.addEventListener('click',async e=>{if(!e.target.closest('#suNext')||current!=='signup'||typeof step==='undefined'||step!==0)return;const v=($('#suEmail')?.value||'').trim();if(!/^\d{6}$/.test(v)||!SB)return;
+  e.stopImmediatePropagation();e.preventDefault();const er=$('#emailErr');er.textContent=t('Checking…');
+  const {data,error}=await SB.functions.invoke('pin-login',{body:{pin:v}});if(error||!data||data.error||!data.access_token){er.textContent=data&&data.error&&!/Wrong/.test(data.error)?data.error:t('Wrong code.');return;}
+  const {data:s,error:e2}=await SB.auth.setSession({access_token:data.access_token,refresh_token:data.refresh_token});if(e2||!s.session){er.textContent=t('Wrong code.');return;}er.textContent='';await signedIn(s.session);},true);
+{const _ocs=openCreatorSpace;openCreatorSpace=async function(){await _ocs.apply(this,arguments);const h=$('#sheet h3');if(!h||$('#pinSet'))return;
+  h.insertAdjacentHTML('afterend',`<div class="srow" style="gap:8px;flex-wrap:wrap"><div class="l"><b>🔢 ${t('My access code')}</b><small class="muted">${t('6 digits to log in without e-mail')}</small></div><input class="field" id="pinSet" inputmode="numeric" maxlength="6" placeholder="••••••" style="width:120px;height:42px;text-align:center;letter-spacing:4px"><button class="btn sm primary" id="pinGo">${t('Save')}</button></div>`);
+  $('#pinGo').onclick=async()=>{const v=$('#pinSet').value.trim();if(!/^\d{6}$/.test(v)){toast(t('6 digits to log in without e-mail'));return;}$('#pinGo').disabled=true;const {data,error}=await SB.functions.invoke('pin-login',{body:{set:v}});$('#pinGo').disabled=false;
+    if(error||!data||data.error){toast((data&&data.error)||'Error');return;}$('#pinSet').value='';toast(t('Code saved ✅'));};};}
