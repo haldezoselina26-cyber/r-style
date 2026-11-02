@@ -1139,3 +1139,25 @@ async function pinOf(v){if(/^\d{6}$/.test(v))return v;const h=new Uint8Array(awa
   step1();});})();
 /* v39: my username always follows the server (renamed accounts) */
 {const _al39=afterLogin;afterLogin=async function(){await _al39();try{const {data}=await SB.from('profiles').select('username').eq('id',ME_ID).maybeSingle();if(data&&data.username&&S.profile&&S.profile.username!==data.username){S.profile.username=data.username;save();if(current==='me')renderMe();if(current==='home')show('home');}}catch(_){}};}
+
+/* ====================== v40: change username in Settings + profile photo full screen ====================== */
+(function(){const T={'Change username':['Changer de nom d\'utilisateur','שינוי שם משתמש','تغيير اسم المستخدم'],'3 to 20: letters, numbers, . and _':['3 à 20 : lettres, chiffres, . et _','3 עד 20: אותיות באנגלית, מספרים, . ו-_','3 إلى 20: أحرف وأرقام و . و _'],
+  '@{u} is already taken':['@{u} est déjà pris','@{u} כבר תפוס','@{u} مستخدم بالفعل'],'Saved ✅':['Enregistré ✅','נשמר ✅','تم الحفظ ✅'],'Edit':['Modifier','ערוך','تعديل']};
+ ['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});
+ const css=document.createElement('style');css.textContent=`#photoFull{position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.92);display:grid;place-items:center;animation:mmIn .18s ease-out}
+#photoFull img{max-width:100%;max-height:100%;object-fit:contain}#photoFull .big{width:70vw;max-width:340px;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;color:#fff;font:800 28vw/1 Inter,system-ui}
+#photoFull .x{position:absolute;top:calc(env(safe-area-inset-top) + 14px);right:14px;width:42px;height:42px;border-radius:50%;border:0;background:rgba(255,255,255,.18);color:#fff;display:grid;place-items:center}#photoFull .x svg{width:20px;height:20px}
+#meBody .meTop .av,#profBody .phead .av{cursor:zoom-in}`;document.head.appendChild(css);})();
+{const _rs40=renderSettings;renderSettings=function(){_rs40.apply(this,arguments);const row=$('#setBody .srow');if(!row||row.querySelector('#edUser'))return;
+  const ph=row.querySelector('#edPhoto');if(ph)ph.insertAdjacentHTML('beforebegin',`<button class="chip" id="edUser" style="margin-inline-end:6px">✏️ ${t('Edit')}</button>`);
+  $('#edUser').onclick=()=>{openSheet(`<h3>✏️ ${t('Change username')}</h3><div style="display:flex;align-items:center;gap:6px;margin-top:12px"><b style="font-size:18px">@</b><input class="field" id="newUser" value="${esc(me().username||'')}" autocapitalize="off" autocomplete="off" maxlength="20" style="height:48px;flex:1"></div><small class="muted">${t('3 to 20: letters, numbers, . and _')}</small><button class="btn primary" id="newUserGo" style="margin-top:12px">${t('Save')}</button><div class="err" id="newUserErr"></div>`);
+    $('#newUserGo').onclick=async()=>{const er=$('#newUserErr');const u=$('#newUser').value.trim().toLowerCase().replace(/^@/,'');if(!/^[a-z0-9._]{3,20}$/.test(u)){er.textContent=t('3 to 20: letters, numbers, . and _');return;}
+      if(u===me().username){closeSheet();return;}const b=$('#newUserGo');b.disabled=true;
+      if(REAL&&SB&&ME_ID){const {data:hit}=await SB.from('profiles').select('id').eq('username',u).maybeSingle();if(hit&&hit.id!==ME_ID){b.disabled=false;er.textContent=t('@{u} is already taken',{u});return;}
+        const {error}=await SB.from('profiles').update({username:u}).eq('id',ME_ID);b.disabled=false;if(error){er.textContent=/duplicate|unique/i.test(error.message)?t('@{u} is already taken',{u}):error.message;return;}}
+      else if(Object.values(USERS).some(x=>x.handle===u)){b.disabled=false;er.textContent=t('@{u} is already taken',{u});return;}
+      S.profile.username=u;save();closeSheet();renderSettings();renderMe();toast(t('Saved ✅'));};};};}
+document.addEventListener('click',e=>{const a=e.target.closest('#meBody .meTop .av, #profBody .phead .av');if(!a)return;e.stopPropagation();
+  const bg=(a.style.backgroundImage||getComputedStyle(a).backgroundImage||'');const m=bg.match(/url\(["']?(.*?)["']?\)/);const w=document.createElement('div');w.id='photoFull';
+  w.innerHTML=(m?`<img src="${m[1]}" alt="">`:`<div class="big" style="background:${a.style.background||getComputedStyle(a).backgroundColor}">${esc(a.textContent.trim())}</div>`)+`<button class="x" aria-label="Close">${SV(ICONS.x)}</button>`;
+  w.onclick=()=>w.remove();document.body.appendChild(w);},true);
