@@ -1191,3 +1191,24 @@ function playIntro(){S.introSeen=true;save();playGuide('promo/intro.mp4',w=>{con
   const anchor=b.querySelector('#creatorSpace')||b.querySelector('.appVer');if(anchor)anchor.insertAdjacentHTML('beforebegin',html);else b.insertAdjacentHTML('beforeend',html);
   $('#gIntro').onclick=()=>playIntro();$('#gTut').onclick=()=>playGuide('promo/tutorial.mp4',w=>w.remove());};}
 (function(){const T={'Black & gold app':['Appli noir et or','אפליקציה בשחור וזהב','تطبيق بالأسود والذهبي'],'Gold colors, white & gold mode, accent colors':['Couleurs or, mode blanc et or, couleurs d\'accent','צבעי זהב, מצב לבן-זהב וצבעי הדגשה','ألوان ذهبية، وضع أبيض وذهبي، ألوان مميزة'],'Black & gold app, white & gold mode':['Appli noir et or, mode blanc et or','אפליקציה בשחור-זהב, מצב לבן-זהב','تطبيق أسود وذهبي، وضع أبيض وذهبي']};['fr','he','ar'].forEach((c,i)=>{for(const k in T)window.I18N[c][k]=T[k][i];});})();
+
+/* ====================== v42: Ruby clears the chat every hour but remembers the important things ====================== */
+UD_KEYS.push('rubyMem');
+const RUBY_HOUR=60*60*1000;let rubyMemBusy=false;
+{const _uc42=userCtx;userCtx=function(){let c=_uc42();const m=(S.rubyMem||[]).filter(Boolean);if(m.length)c+='\nThings you remember about the user (always follow them):\n- '+m.join('\n- ');return c;};}
+async function rubyRemember(){const conv=(S.ruby||[]).filter(m=>!m.err&&!m.modestQ&&m.text).map(m=>(m.role==='user'?'User: ':'Ruby: ')+m.text).join('\n').slice(-6000);if(!conv)return true;
+  const old=(S.rubyMem||[]).join('\n- ');
+  const p=`You are the memory of Ruby, a fashion stylist assistant. Here is what you already remember:\n- ${old||'(nothing)'}\n\nHere is the last conversation:\n${conv}\n\nReturn ONLY a JSON array of short strings (max 15) with everything important to remember for the future: the user's instructions (e.g. language to speak, tone), tastes, sizes, colors, plans and looks chosen for later, important events. Keep the old memories that are still true, remove ones replaced by new ones. Write each item in the user's language. No small talk.`;
+  try{const r=await AI([{role:'user',content:p}],{cache:false});const s=String(r&&r.text||'');const j=s.slice(s.indexOf('['),s.lastIndexOf(']')+1);const a=JSON.parse(j);
+    if(Array.isArray(a)){S.rubyMem=a.map(x=>String(x).slice(0,200)).filter(Boolean).slice(0,15);return true;}}catch(e){console.warn('rubyMem',e);}return false;}
+async function rubyHourly(){if(rubyMemBusy||typeof rubyBusy!=='undefined'&&rubyBusy)return;const real=(S.ruby||[]).filter(m=>!m.modestQ);
+  if(!real.length){if(S.rubyStart){S.rubyStart=0;save();}return;}
+  if(!S.rubyStart){S.rubyStart=Date.now();save();return;}
+  const age=Date.now()-S.rubyStart;if(age<RUBY_HOUR)return;
+  rubyMemBusy=true;let ok=!AI?false:await rubyRemember();rubyMemBusy=false;
+  if(!ok&&age<3*RUBY_HOUR)return;
+  S.ruby=[];S.rubyStart=0;save();if(typeof udSched==='function')udSched();if(current==='ruby'){renderRuby();toast('🧹 '+t('New conversation — Ruby remembers the important things'));}}
+setInterval(rubyHourly,60*1000);
+{const _sh42=show;show=function(id){const r=_sh42.apply(this,arguments);if(id==='ruby')rubyHourly();return r;};}
+{const f=$('#rubyForm');if(f&&f.onsubmit){const _os42=f.onsubmit;f.onsubmit=async function(e){if(!S.rubyStart)S.rubyStart=Date.now();return _os42.call(this,e);};}}
+(function(){const k='New conversation — Ruby remembers the important things';const v=['Nouvelle conversation — Ruby se souvient des choses importantes','שיחה חדשה — רובי זוכרת את הדברים החשובים','محادثة جديدة — روبي تتذكر الأشياء المهمة'];['fr','he','ar'].forEach((c,i)=>{if(window.I18N&&window.I18N[c])window.I18N[c][k]=v[i];});})();
