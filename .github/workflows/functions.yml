@@ -18,3 +18,5 @@ jobs:
         run: supabase functions deploy ruby --project-ref gnctjjexhzeavxnpbckm --no-verify-jwt --use-api --yes
       - name: Deploy pin-login
         run: supabase functions deploy pin-login --project-ref gnctjjexhzeavxnpbckm --no-verify-jwt --use-api --yes
+      - name: Deploy turn
+        run: supabase functions deploy turn --project-ref gnctjjexhzeavxnpbckm --no-verify-jwt --use-api --yes

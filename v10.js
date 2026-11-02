@@ -306,7 +306,7 @@ document.addEventListener('click',async e=>{const b=e.target.closest('#delYes');
 #inc .no{background:#E5202E}#inc .yes{background:#22C55E}#inc .lb{display:block;text-align:center;font-size:13px;margin-top:8px;opacity:.8}`;document.head.appendChild(css);
  const d=document.createElement('div');d.id='inc';document.body.appendChild(d);})();
 const RC={pc:null,peer:null,id:null,callId:null,local:null,remote:null,role:null,timer:0,connected:false,pendingIce:[],inbox:null,out:{}};
-const ICE=[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']}];
+let ICE=[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']}];
 function rcOut(uid){if(RC.out[uid])return RC.out[uid];const ch=SB.channel('call-'+uid,{config:{broadcast:{self:false}}});RC.out[uid]=new Promise(res=>{ch.subscribe(st=>{if(st==='SUBSCRIBED')res(ch);});setTimeout(()=>res(ch),4000);});return RC.out[uid];}
 async function rcSend(uid,msg){const payload=Object.assign({from:ME_ID,callId:RC.callId},msg);try{const ch=await rcOut(uid);await ch.send({type:'broadcast',event:'sig',payload});}catch(_){}}
 function rcListen(){if(!SB||!ME_ID||RC.inbox)return;RC.inbox=SB.channel('call-'+ME_ID,{config:{broadcast:{self:false}}}).on('broadcast',{event:'sig'},({payload})=>rcOnSig(payload)).subscribe();}
@@ -1219,3 +1219,12 @@ setInterval(rubyHourly,60*1000);
   const html=`<div class="sect">${t('Legal')}</div><a class="srow" id="legalP" href="privacy.html?l=${l}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><div class="l"><b>🔒 ${t('Privacy policy')}</b></div><span class="muted">›</span></a><a class="srow" id="legalT" href="terms.html?l=${l}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><div class="l"><b>📄 ${t('Terms of use')}</b></div><span class="muted">›</span></a>`;
   const anchor=b.querySelector('#creatorSpace')||b.querySelector('.appVer');if(anchor)anchor.insertAdjacentHTML('beforebegin',html);else b.insertAdjacentHTML('beforeend',html);};}
 (function(){const T={'Legal':['Mentions légales','מסמכים משפטיים','قانوني'],'Privacy policy':['Politique de confidentialité','מדיניות פרטיות','سياسة الخصوصية'],'Terms of use':['Conditions d\'utilisation','תנאי שימוש','شروط الاستخدام']};['fr','he','ar'].forEach((c,i)=>{if(window.I18N&&window.I18N[c])for(const k in T)window.I18N[c][k]=T[k][i];});})();
+
+/* ====================== v44: calls work on every network (TURN relay from the server) ====================== */
+const ICE0=ICE.slice();let iceAt=0,iceP=null;
+async function turnLoad(){if(!(REAL&&SB&&ME_ID))return;if(Date.now()-iceAt<12*3600e3)return;if(iceP)return iceP;
+  iceP=(async()=>{try{const {data:{session}}=await SB.auth.getSession();if(!session)return;
+    const r=await fetch(SB_URL+'/functions/v1/turn',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:'{}'});
+    const d=await r.json();if(Array.isArray(d.iceServers)&&d.iceServers.length){ICE=ICE0.concat(d.iceServers);iceAt=Date.now();}}catch(e){console.warn('turn',e);}finally{iceP=null;}})();return iceP;}
+{const _al44=afterLogin;afterLogin=async function(){await _al44();turnLoad();};}
+{const _gs44=gumSafe;gumSafe=async function(){await Promise.race([turnLoad(),new Promise(r=>setTimeout(r,2500))]);return _gs44.apply(this,arguments);};}
