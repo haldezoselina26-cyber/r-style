@@ -45,7 +45,7 @@ function bindRealSignup(){
       step=2;renderStep();return;}
     if(step===2){btn.disabled=true;const {data:hit}=await SB.from('profiles').select('id').eq('username',D.user).maybeSingle();btn.disabled=false;
       if(hit){$('#userMsg').textContent=t('@{u} is already taken',{u:D.user});$('#userMsg').className='err';return;}}
-    if(step===NSTEPS-1){prevNext();if(S.profile&&ME_ID){S.profile.uid=ME_ID;save();
+    if(step===NSTEPS-1){if(!S.introSeen)S.introPending=true;prevNext();if(S.profile&&ME_ID){S.profile.uid=ME_ID;save();
         await SB.from('profiles').upsert({id:ME_ID,username:S.profile.username,color:'#E11D2E',bday:S.profile.birth?S.profile.birth.slice(5,10):null});await afterLogin();}return;}
     prevNext();};
   $('#resend').onclick=async()=>{await SB.auth.signInWithOtp({email:D.email,options:{shouldCreateUser:true,emailRedirectTo:location.origin+location.pathname}});toast(t('New link sent'));};
@@ -1185,7 +1185,7 @@ function playIntro(){S.introSeen=true;save();playGuide('promo/intro.mp4',w=>{con
   e.innerHTML=`<h3>${t('Did you understand everything?')}</h3><button class="n">✅ ${t('Yes, let\'s go!')}</button><button class="y">🎬 ${t('Show me in detail')}</button>`;w.appendChild(e);w.querySelector('.gx')?.remove();w.querySelector('.gskip')?.remove();w.querySelector('.gs')?.remove();
   e.querySelector('.n').onclick=()=>w.remove();e.querySelector('.y').onclick=()=>{w.remove();playGuide('promo/tutorial.mp4',w2=>w2.remove());};});}
 {const _sh41=show;show=function(id){const r=_sh41.apply(this,arguments);
-  if(id==='home'&&S.profile&&!S.introSeen&&!$('#guideV')){const j=Date.parse(S.profile.joined||'');if(!isNaN(j)&&Date.now()-j<3*864e5)setTimeout(()=>{if(current==='home'&&!S.introSeen)playIntro();},700);else{S.introSeen=true;save();}}return r;};}
+  if(id==='home'&&S.profile&&S.introPending&&!$('#guideV')){S.introPending=false;save();setTimeout(()=>{if(current==='home')playIntro();},700);}return r;};}
 {const _rs41=renderSettings;renderSettings=function(){_rs41.apply(this,arguments);const b=$('#setBody');if(!b||b.querySelector('#gIntro'))return;
   const html=`<div class="sect">${t('Tutorial')}</div><button class="srow" id="gIntro" style="width:100%;text-align:start"><div class="l"><b>🎬 ${t('Welcome video')}</b><small class="muted">${t('Watch how R-Style works again')}</small></div></button><button class="srow" id="gTut" style="width:100%;text-align:start"><div class="l"><b>📱 ${t('Tutorial')}</b><small class="muted">${t('Detailed tutorial with the real buttons')}</small></div></button>`;
   const anchor=b.querySelector('#creatorSpace')||b.querySelector('.appVer');if(anchor)anchor.insertAdjacentHTML('beforebegin',html);else b.insertAdjacentHTML('beforeend',html);
@@ -1256,3 +1256,203 @@ openCreatorSpace=async function(){openSheet(`<h3>👑 ${t('Creator space')}</h3>
     if(!box.querySelector('[data-rep]'))box.innerHTML=`<p style="text-align:center;padding:18px">${t('No reports 🎉')}</p>`;
     if(pr){const u=pr.dataset.rprof;const {data}=await SB.from('profiles').select('*').eq('id',u).maybeSingle();if(data){closeSheet();openProfile(addReal(data));}}};};
 (function(){const T={'Ignore':['Ignorer','התעלמות','تجاهل'],'Already deleted':['Déjà supprimé','כבר נמחק','تم الحذف']};['fr','he','ar'].forEach((c,i)=>{if(window.I18N&&window.I18N[c])for(const k in T)window.I18N[c][k]=T[k][i];});})();
+
+/* ====================== v46: Shorts — tap = pause/play (drawn icon), hold on the top half = speed x2 ====================== */
+(function(){const css=document.createElement('style');css.textContent=`
+.short .vpi{position:absolute;left:50%;top:50%;width:84px;height:84px;margin:-42px 0 0 -42px;border-radius:50%;display:grid;place-items:center;z-index:4;pointer-events:none;
+ background:rgba(255,255,255,.16);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.35);box-shadow:0 8px 30px rgba(0,0,0,.25);animation:vpiIn .22s ease-out}
+.short .vpi svg{width:36px;height:36px;fill:#fff;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
+.short .vpi.out{animation:vpiOut .35s ease-in forwards}
+body.gold .short .vpi{background:rgba(212,175,55,.18);border-color:rgba(232,194,90,.6)}body.gold .short .vpi svg{fill:#F3D27A}
+.short .vfast{position:absolute;top:calc(env(safe-area-inset-top) + 64px);left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;display:flex;align-items:center;gap:6px;
+ padding:7px 14px;border-radius:20px;color:#fff;font:700 14px Inter,system-ui;background:rgba(0,0,0,.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.25)}
+.short .vfast svg{width:16px;height:16px;fill:currentColor}body.gold .short .vfast{color:#F3D27A;border-color:rgba(232,194,90,.55)}
+@keyframes vpiIn{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}@keyframes vpiOut{to{transform:scale(1.25);opacity:0}}`;document.head.appendChild(css);})();
+const VPI_PAUSE='<svg viewBox="0 0 24 24"><rect x="6" y="4.5" width="4.2" height="15" rx="1.6"/><rect x="13.8" y="4.5" width="4.2" height="15" rx="1.6"/></svg>';
+const VPI_PLAY='<svg viewBox="0 0 24 24"><path d="M8 4.8v14.4c0 .9 1 1.4 1.7.9l10.6-7.2c.6-.4.6-1.4 0-1.8L9.7 3.9C9 3.4 8 3.9 8 4.8z"/></svg>';
+const VPI_FAST='<svg viewBox="0 0 24 24"><path d="M3 6.2v11.6c0 .8.9 1.3 1.6.8L12 13.3v4.5c0 .8.9 1.3 1.6.8l8-5.8c.6-.4.6-1.2 0-1.6l-8-5.8c-.7-.5-1.6 0-1.6.8v4.5L4.6 5.4C3.9 4.9 3 5.4 3 6.2z"/></svg>';
+function vpiShow(sl,paused){sl.querySelector('.vpi')?.remove();const d=document.createElement('div');d.className='vpi';d.innerHTML=paused?VPI_PAUSE:VPI_PLAY;sl.appendChild(d);
+  if(!paused)setTimeout(()=>{d.classList.add('out');setTimeout(()=>d.remove(),360);},350);}
+(function(){const feed=$('#feed');if(!feed)return;let sx=0,sy=0,downT=0,hold=null,fast=null,lastTap=0,tapT=null,moved=false;
+  const vidOf=sl=>sl&&sl.querySelector('video.bg');
+  const stopFast=()=>{clearTimeout(hold);hold=null;if(fast){try{fast.v.playbackRate=1;}catch(_){}fast.badge.remove();fast=null;return true;}return false;};
+  feed.addEventListener('pointerdown',e=>{if(e.target.closest('button,a,[data-open],.rail,.smeta'))return;sx=e.clientX;sy=e.clientY;downT=Date.now();moved=false;
+    const sl=e.target.closest('.short'),v=vidOf(sl);if(!v)return;const r=sl.getBoundingClientRect();
+    if(e.clientY-r.top<r.height*.5){hold=setTimeout(()=>{hold=null;if(moved||v.paused)return;try{v.playbackRate=2;}catch(_){}const b=document.createElement('div');b.className='vfast';b.innerHTML=VPI_FAST+'2x';sl.appendChild(b);fast={v,badge:b};},380);}});
+  feed.addEventListener('pointermove',e=>{if(Math.abs(e.clientX-sx)>12||Math.abs(e.clientY-sy)>12){moved=true;if(!fast){clearTimeout(hold);hold=null;}}});
+  feed.addEventListener('pointercancel',()=>{stopFast();});feed.addEventListener('scroll',()=>{if(fast)stopFast();},{passive:true});
+  feed.addEventListener('pointerup',e=>{const wasFast=stopFast();if(wasFast||moved||Date.now()-downT>380)return;if(e.target.closest('button,a,[data-open],.rail,.smeta'))return;
+    const sl=e.target.closest('.short'),v=vidOf(sl);if(!v)return;const now=Date.now();
+    if(now-lastTap<320){clearTimeout(tapT);tapT=null;lastTap=0;return;}/* double tap = like (handled elsewhere) */
+    lastTap=now;tapT=setTimeout(()=>{tapT=null;if(v.paused){const p=v.play();if(p&&p.catch)p.catch(()=>{});vpiShow(sl,false);}else{v.pause();vpiShow(sl,true);}},300);});
+  feed.addEventListener('contextmenu',e=>{if(e.target.closest('.short'))e.preventDefault();});})();
+/* when the video starts again by itself (scroll back), hide the pause icon */
+document.addEventListener('play',e=>{const v=e.target;if(v&&v.classList&&v.classList.contains('bg'))v.closest('.short')?.querySelector('.vpi')?.remove();},true);
+
+/* ====================== v47: Gold Style — every emoji becomes a golden drawing ====================== */
+(function(){const css=document.createElement('style');css.textContent=`
+.short,.short video{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+body.gold .emj{display:inline-block;filter:grayscale(1) sepia(1) saturate(3.2) hue-rotate(-8deg) brightness(1.08) contrast(1.15) drop-shadow(0 0 1.5px rgba(255,214,120,.55)) drop-shadow(0 1px 1px rgba(0,0,0,.35));font-style:normal}
+body.gold.glight .emj{filter:grayscale(1) sepia(1) saturate(3.6) hue-rotate(-10deg) brightness(.92) contrast(1.25) drop-shadow(0 1px 1px rgba(120,90,10,.35))}`;document.head.appendChild(css);
+ const RE=/(\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic}|\p{Emoji_Modifier})*️?|[\u{1F1E6}-\u{1F1FF}]{2})/gu,TEST=/\p{Extended_Pictographic}|[\u{1F1E6}-\u{1F1FF}]/u;
+ const SKIP=new Set(['SCRIPT','STYLE','TEXTAREA','INPUT','OPTION','TITLE','SVG','svg','CANVAS','VIDEO','AUDIO']);
+ function wrap(root){if(!document.body.classList.contains('gold'))return;const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(n){
+    if(!n.nodeValue||!TEST.test(n.nodeValue))return NodeFilter.FILTER_REJECT;let p=n.parentNode;
+    for(let i=0;p&&i<40;i++,p=p.parentNode){if(p.nodeType!==1)break;if(SKIP.has(p.nodeName)||p.isContentEditable||(p.classList&&p.classList.contains('emj')))return NodeFilter.FILTER_REJECT;}
+    return NodeFilter.FILTER_ACCEPT;}});
+   const list=[];while(w.nextNode())list.push(w.currentNode);
+   for(const n of list){const s=n.nodeValue;RE.lastIndex=0;if(!RE.test(s))continue;RE.lastIndex=0;const f=document.createDocumentFragment();let i=0,m;
+     while((m=RE.exec(s))){if(/^[©®™]$/.test(m[0]))continue;if(m.index>i)f.appendChild(document.createTextNode(s.slice(i,m.index)));const sp=document.createElement('span');sp.className='emj';sp.textContent=m[0];f.appendChild(sp);i=m.index+m[0].length;}
+     if(i===0)continue;if(i<s.length)f.appendChild(document.createTextNode(s.slice(i)));n.parentNode&&n.parentNode.replaceChild(f,n);}}
+ let pend=new Set(),raf=0;const flush=()=>{raf=0;const L=[...pend];pend.clear();L.forEach(n=>{if(n.isConnected)wrap(n.nodeType===3?n.parentNode:n);});};
+ new MutationObserver(ms=>{if(!document.body.classList.contains('gold'))return;for(const m of ms){if(m.type==='characterData')pend.add(m.target);else m.addedNodes.forEach(n=>{if(n.nodeType===1||n.nodeType===3)pend.add(n);});}if(!raf&&pend.size)raf=requestAnimationFrame(flush);})
+   .observe(document.body,{childList:true,subtree:true,characterData:true});
+ new MutationObserver(()=>{if(document.body.classList.contains('gold'))wrap(document.body);}).observe(document.body,{attributes:true,attributeFilter:['class']});
+ if(document.body.classList.contains('gold'))wrap(document.body);})();
+
+/* ====================== v48: 3 looks per day, Ruby asks first (style + item you want to wear), plan tomorrow (Red) or weeks ahead (Gold) ====================== */
+UD_KEYS.push('plans');
+const PLAN_MAX_GOLD=90;
+function dayAdd(n){const d=new Date(today()+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);}
+function dayLabel(d,long){const loc=S.lang==='he'?'he-IL':S.lang==='ar'?'ar':S.lang||'en';if(d===today())return t('Today');if(d===dayAdd(1))return t('Tomorrow');
+  return new Date(d+'T12:00:00').toLocaleDateString(loc,long?{weekday:'long',day:'numeric',month:'long'}:{weekday:'short',day:'numeric'});}
+function plansClean(){S.plans=S.plans||{};const t0=today();for(const k in S.plans)if(k<t0)delete S.plans[k];}
+function planOf(d){plansClean();const p=S.plans[d];return p&&Array.isArray(p.list)&&p.list.length?p:null;}
+function canPlan(d){const n=Math.round((new Date(d+'T12:00:00')-new Date(today()+'T12:00:00'))/864e5);return n>=0&&(S.vip?n<=PLAN_MAX_GOLD:n<=1);}
+
+async function makePlan(d,o){const must=(o.ids||[]).filter(id=>findItem(id));const isToday=d===today();const w=W[S.weather];let list=null;
+  if(AI){try{const v=await AI.json(`${RUBY}\n\n${userCtx()}\n\nTask: propose 3 different complete outfits for ${isToday?'today':d} from the wardrobe (2 to 4 existing ids each: top+bottom or dress, shoes, optional layer/accessory).
+Style wanted: ${o.style||'any'}. Occasion: ${o.occasion||'Normal day'}.${must.length?` Every outfit MUST include these ids: ${must.join(', ')}.`:''}${o.text?` The user wants to wear this piece (described by her): "${String(o.text).slice(0,200)}" — build the outfits around it; if it matches a wardrobe item use its id, otherwise mention it in "why".`:''}
+${isToday?`Weather: ${w.t}°, ${w.label}.`:'Assume the usual weather for the season.'} Skip laundry. Make sure colors and styles really go together (color harmony, matching formality, balanced silhouette). Titles and "why" in ${langName()}. Return JSON only: {"outfits":[{"title":"2-3 words","ids":["..."],"why":"one short sentence"}]}`,{modelTier:'quick'});
+    list=(v&&Array.isArray(v.outfits)?v.outfits:[]).map(x=>({title:String(x.title||''),why:String(x.why||''),ids:[...new Set([...must,...(x.ids||[]).filter(id=>findItem(id))])]})).filter(x=>x.ids.length>=2).slice(0,3);}catch(e){console.warn('plan',e);list=null;}}
+  list=list||[];let k=0;while(list.length<3&&k<6){const lo=localOutfit((list.length+k)%3);k++;
+    const ids=lo.ids.filter(id=>{const it=findItem(id);return !must.some(m=>{const mi=findItem(m);return mi&&it&&mi.cat===it.cat;});});list.push({title:lo.title,why:o.text?t('With the piece you wanted to wear.'):lo.why,ids:[...must,...ids]});}
+  S.plans=S.plans||{};S.plans[d]={style:o.style||'',occasion:o.occasion||'Normal day',want:{text:o.text||'',ids:must},list,at:Date.now()};
+  if(isToday){S.today={d,w:S.weather,list};}save();if(typeof udPush==='function')setTimeout(udPush,300);return S.plans[d];}
+
+function openPlanFlow(d){if(!canPlan(d)){if(!S.vip){openVip('home');toast(t('With Gold you can plan your looks weeks ahead'));}return;}
+  const old=S.plans&&S.plans[d];const st={style:old?.style||(me().styles||[])[0]||'',occasion:old?.occasion||'Normal day',want:null,text:old?.want?.text||'',ids:[...(old?.want?.ids||[])]};
+  const items=allItems();
+  const draw=()=>{setSheet(`<h3>${t('Ruby')} · ${esc(dayLabel(d,true))}</h3>
+   <b style="font-size:15px;display:block;margin:6px 0 8px">${t('What style for {d}?',{d:dayLabel(d).toLowerCase()})}</b>
+   <div class="row" style="flex-wrap:wrap;gap:6px">${STYLES.map(s=>`<button class="chip ${s===st.style?'on':''}" data-pst="${esc(s)}">${t(s)}</button>`).join('')}</div>
+   <b style="font-size:15px;display:block;margin:14px 0 8px">${t('What\'s happening that day?')}</b>
+   <div class="row" style="flex-wrap:wrap;gap:6px">${EVENTS.map(ev=>`<button class="chip ${ev===st.occasion?'on':''}" data-pev="${esc(ev)}">${t(ev)}</button>`).join('')}</div>
+   <b style="font-size:15px;display:block;margin:14px 0 8px">${t('Is there a piece you\'d like to wear?')}</b>
+   <div class="row" style="gap:6px"><button class="chip ${st.want===true?'on':''}" data-pw="1">${t('Yes')}</button><button class="chip ${st.want===false?'on':''}" data-pw="0">${t('No')}</button></div>
+   ${st.want?`<textarea id="pText" rows="2" placeholder="${t('Describe it (e.g. my black leather jacket)')}" style="width:100%;box-sizing:border-box;margin-top:10px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--fg);padding:10px;font:inherit;resize:none">${esc(st.text)}</textarea>
+     <small class="muted" style="display:block;margin:10px 0 6px">${t('…or choose it in your wardrobe')}</small>
+     <div class="pgrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:210px;overflow:auto">${items.map(i=>`<button data-pid="${esc(i.id)}" class="pcell ${st.ids.includes(i.id)?'on':''}" style="${(itemPh(i).match(/style="([^"]*)"/)||[])[1]||''};aspect-ratio:3/4;border-radius:12px;background-size:cover;background-position:center;position:relative;border:2px solid ${st.ids.includes(i.id)?'var(--accent)':'transparent'};display:grid;place-items:center">${itemFace(i)}<small style="position:absolute;left:3px;right:3px;bottom:3px;font-size:9px;background:rgba(0,0,0,.45);color:#fff;border-radius:6px;padding:1px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(i.name)}</small></button>`).join('')}</div>`:''}
+   <button class="btn primary" id="pGo" style="width:100%;margin-top:16px" ${st.want===null?'disabled':''}>${t('Create my 3 looks')}</button>`);
+   const sh=$('#sheet');
+   sh.querySelectorAll('[data-pst]').forEach(b=>b.onclick=()=>{st.style=b.dataset.pst;draw();});
+   sh.querySelectorAll('[data-pev]').forEach(b=>b.onclick=()=>{st.occasion=b.dataset.pev;draw();});
+   sh.querySelectorAll('[data-pw]').forEach(b=>b.onclick=()=>{st.want=b.dataset.pw==='1';if(!st.want){st.text='';st.ids=[];}draw();});
+   const ta=$('#pText');if(ta)ta.oninput=()=>{st.text=ta.value;};
+   sh.querySelectorAll('[data-pid]').forEach(b=>b.onclick=()=>{const id=b.dataset.pid;st.ids=st.ids.includes(id)?st.ids.filter(x=>x!==id):[...st.ids,id].slice(-2);const g=sh.querySelector('.pgrid'),top=g?g.scrollTop:0;draw();const g2=$('#sheet').querySelector('.pgrid');if(g2)g2.scrollTop=top;});
+   $('#pGo').onclick=async()=>{setSheet(`<div class="why" style="padding:24px 4px"><span class="spin"></span><span>${t('Ruby is preparing your outfits…')}</span></div>`);
+     await makePlan(d,{style:st.style,occasion:st.occasion,text:st.want?st.text.trim():'',ids:st.want?st.ids:[]});
+     if(d===today()){closeSheet();renderHome();toast(t('Your 3 looks are ready'));}else{openPlanView(d);toast(t('Saved for {d}',{d:dayLabel(d).toLowerCase()}));if(current==='home')renderHome();}};};
+  openSheet('<div></div>');draw();}
+
+function planCards(list,wearable){return list.map((o,k)=>{const items=o.ids.map(findItem).filter(Boolean).slice(0,4);const worn=wearable&&items.length&&items.every(i=>lastWorn(i.id)===0);
+  return `<div class="ocard" data-pk="${k}"><div class="greet"><div><b style="font-size:18px">${esc(o.title)}</b></div><span class="k">${k+1} / ${list.length}</span></div>
+   <div class="ogrid">${items.map(i=>`<div ${itemPh(i)}>${itemFace(i)}<small>${esc(i.name)}</small></div>`).join('')}</div><p class="why muted">${md(o.why)}</p>
+   ${wearable?`<div class="acts"><button class="${worn?'done':'wear'}" data-pwear="${k}">${worn?t('Worn today'):t('Wear today')}</button><button data-psave="${k}" aria-label="${t('Save')}">${SV(ICONS.bookmark)}</button><button data-pav="${k}" aria-label="${t('My avatar')}">${SV(ICONS.avatar)}</button></div>`:''}</div>`;}).join('');}
+function openPlanView(d){const p=planOf(d);if(!p){openPlanFlow(d);return;}
+  openSheet(`<h3>${esc(dayLabel(d,true))}</h3><p class="muted" style="margin:0 0 10px;font-size:13px">${esc(t(p.style||''))}${p.occasion&&p.occasion!=='Normal day'?' · '+esc(t(p.occasion)):''}</p>
+   <div class="outfits" style="padding:0 0 6px;height:330px">${planCards(p.list,false)}</div>
+   <div style="display:flex;gap:8px;margin-top:10px"><button class="btn primary sm" id="pvRe" style="flex:1">↻ ${t('Change')}</button><button class="btn ghost sm" id="pvDel">${t('Delete')}</button></div>`);
+  $('#pvRe').onclick=()=>openPlanFlow(d);$('#pvDel').onclick=()=>{delete S.plans[d];save();closeSheet();if(current==='home')renderHome();};}
+
+function planHomeHTML(){const td=today(),p=planOf(td),tm=dayAdd(1),pt=planOf(tm);
+  const ask=`<div class="ocard planAsk" style="width:100%;justify-content:center;gap:12px;text-align:center"><div class="greet" style="justify-content:center"><div><b>${greetLine()} ${esc(me().username)}</b><small>${t('Ruby: what style do you feel like today?')}</small></div></div>
+     <button class="btn primary" data-pnew="${td}">${t('Create my 3 looks')}</button></div>`;
+  const days=[];const N=S.vip?14:2;for(let i=0;i<N;i++)days.push(dayAdd(i));
+  const strip=`<div class="planStrip">${days.map(x=>`<button data-pday="${x}" class="${planOf(x)?'has':''} ${x===td?'td':''}"><b>${esc(dayLabel(x))}</b><i></i></button>`).join('')}${S.vip?`<label class="pmore">${t('Other date')}<input type="date" id="pDate" min="${td}" max="${dayAdd(PLAN_MAX_GOLD)}"></label>`:`<button data-pgold="1" class="pmore">${t('Weeks ahead')} · Gold</button>`}</div>`;
+  return {cards:p?planCards(p.list,true):ask,strip,has:!!p,n:p?p.list.length:0};}
+function planCss(){if($('#planCss'))return;const c=document.createElement('style');c.id='planCss';c.textContent=`
+.planStrip{display:flex;gap:8px;overflow-x:auto;padding:10px 18px 2px;scrollbar-width:none;flex:none}.planStrip::-webkit-scrollbar{display:none}
+.planStrip button,.planStrip .pmore{flex:none;min-width:64px;padding:8px 10px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:600 12.5px Inter,system-ui;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative}
+.planStrip button i{width:6px;height:6px;border-radius:3px;background:var(--line)}.planStrip button.has i{background:var(--accent)}.planStrip button.td{border-color:var(--accent)}
+.planStrip .pmore{justify-content:center;color:var(--muted);white-space:nowrap}.planStrip .pmore input{position:absolute;inset:0;opacity:0;width:100%;height:100%}
+.planAsk .btn{align-self:center;padding:0 22px}`;document.head.appendChild(c);}
+function wirePlanBox(box){box.querySelectorAll('[data-pnew]').forEach(b=>b.onclick=()=>openPlanFlow(b.dataset.pnew));
+  box.querySelectorAll('[data-pday]').forEach(b=>b.onclick=()=>{const x=b.dataset.pday;if(x===today()&&planOf(x)){openPlanFlow(x);return;}openPlanView(x);});
+  box.querySelectorAll('[data-pgold]').forEach(b=>b.onclick=()=>openVip('home'));
+  const di=box.querySelector('#pDate');if(di)di.onchange=()=>{if(di.value)openPlanView(di.value);};
+  box.querySelectorAll('[data-pwear]').forEach(b=>b.onclick=()=>{const o=planOf(today()).list[+b.dataset.pwear];markWorn(o.ids);renderHome();toast(t('Saved as today\'s outfit'));});
+  box.querySelectorAll('[data-psave]').forEach(b=>b.onclick=()=>{const o=planOf(today()).list[+b.dataset.psave];S.saved.unshift({id:'o'+Date.now(),title:o.title,ids:o.ids});save();toast(t('Outfit saved'));});
+  box.querySelectorAll('[data-pav]').forEach(b=>b.onclick=()=>{const o=planOf(today()).list[+b.dataset.pav];dressAvatar(o.ids);openAvTab();});}
+/* Red: today's 3 looks (or Ruby's question) + today/tomorrow */
+genToday=function(){planCss();const h=planHomeHTML();const of=$('#outfits');if(!of)return;of.innerHTML=h.cards;
+  $('#outDots').innerHTML=h.has?Array.from({length:h.n},(_,k)=>`<i class="${k?'':'on'}"></i>`).join(''):'';
+  $('#todayWrap .planStrip')?.remove();$('#todayWrap').insertAdjacentHTML('beforeend',h.strip);wirePlanBox($('#todayWrap'));
+  const p=planOf(today());if(p)S.today={d:today(),w:S.weather,list:p.list};};
+/* Gold: same 3 looks + plan any day up to 3 months ahead */
+renderVipHome=function(){const box=$('#vipHome');if(!box)return;if(!S.vip){box.innerHTML='';return;}planCss();const h=planHomeHTML();
+  const month=new Date().toLocaleDateString(S.lang==='he'?'he-IL':S.lang==='ar'?'ar':S.lang||'en',{month:'long'});
+  box.innerHTML=`<div class="vhRow"><span>${t('Your looks by Ruby')}</span><small>${t('Today')}</small></div><div class="outfits" id="vOutfits" style="padding:0 0 4px">${h.cards}</div>${h.strip}
+   <button class="trendCard" id="trendCard">${SV(ICONS.trend)}<b>${t('Ruby\'s trends')} · ${esc(month)}<small>${t('Your monthly style report')}</small></b>${SV(ICONS.chev,'style="width:18px;height:18px;color:var(--muted)"')}</button>`;
+  wirePlanBox(box);};
+(function(){const T={'Tomorrow':['Demain','מחר','غدًا'],'What style for {d}?':['Quel style pour {d} ?','איזה סטייל ל{d}?','أي ستايل لـ{d}؟'],'Is there a piece you\'d like to wear?':['Il y a un vêtement que tu aimerais mettre ?','יש בגד שהיית רוצה ללבוש?','هل هناك قطعة تريدين ارتداءها؟'],
+  'Yes':['Oui','כן','نعم'],'No':['Non','לא','لا'],'Describe it (e.g. my black leather jacket)':['Décris-le (ex : ma veste en cuir noire)','תארי אותו (למשל: מעיל העור השחור שלי)','صفيها (مثلًا: جاكيتي الجلدي الأسود)'],'…or choose it in your wardrobe':['…ou choisis-le dans ta garde-robe','…או בחרי אותו מהארון','…أو اختاريها من خزانتك'],
+  'Create my 3 looks':['Créer mes 3 looks','צרי לי 3 לוקים','أنشئي 3 إطلالات'],'Your 3 looks are ready':['Tes 3 looks sont prêts','3 הלוקים שלך מוכנים','إطلالاتك الثلاث جاهزة'],'Saved for {d}':['Enregistré pour {d}','נשמר ל{d}','تم الحفظ لـ{d}'],'Change':['Changer','לשנות','تغيير'],'Delete':['Supprimer','מחיקה','حذف'],
+  'Ruby: what style do you feel like today?':['Ruby : tu as envie de quel style aujourd\'hui ?','רובי: באיזה סטייל בא לך היום?','روبي: أي ستايل تريدين اليوم؟'],'Other date':['Autre date','תאריך אחר','تاريخ آخر'],'Weeks ahead':['Des semaines à l\'avance','שבועות מראש','أسابيع مقدمًا'],
+  'With Gold you can plan your looks weeks ahead':['Avec Gold, tu peux préparer tes looks des semaines à l\'avance','עם Gold אפשר לתכנן לוקים שבועות מראש','مع Gold يمكنك تخطيط إطلالاتك قبل أسابيع'],'Your looks by Ruby':['Tes looks par Ruby','הלוקים שלך מרובי','إطلالاتك من روبي'],'With the piece you wanted to wear.':['Avec le vêtement que tu voulais mettre.','עם הבגד שרצית ללבוש.','مع القطعة التي أردت ارتداءها.']};
+ ['fr','he','ar'].forEach((c,i)=>{if(window.I18N&&window.I18N[c])for(const k in T)window.I18N[c][k]=T[k][i];});})();
+
+/* ====================== v49: SHEIN + Temu in the wardrobe, "where to buy" and "what's missing" ====================== */
+const SHOP={shein:'',temu:''};/* partner (affiliate) codes go here when the programs accept R-Style */
+function shopUrl(s,q){q=String(q||'').trim();
+  if(s==='temu')return 'https://www.temu.com/search_result.html?search_key='+encodeURIComponent(q||'women fashion')+(SHOP.temu?'&'+SHOP.temu:'');
+  return 'https://www.shein.com/pdsearch/'+encodeURIComponent(q||'women fashion')+'/'+(SHOP.shein?'?'+SHOP.shein:'');}
+const SHOP_LOGO={shein:'<b style="font:900 15px/1 Inter,system-ui;letter-spacing:1.5px">SHEIN</b>',temu:'<b style="font:900 16px/1 Inter,system-ui;letter-spacing:.5px;color:#FB7701">Temu</b>'};
+(function(){const c=document.createElement('style');c.textContent=`
+.shopBar{display:flex;gap:8px;align-items:center;margin:0 0 12px}.shopBar span{font-size:13px;font-weight:700;color:var(--muted);margin-inline-end:auto}
+.shopBar a{height:36px;padding:0 16px;border-radius:12px;display:grid;place-items:center;background:var(--card);border:1px solid var(--line);color:var(--fg);text-decoration:none}
+body.gold .shopBar a{border-color:rgba(212,175,55,.45)}.shop2{display:flex;gap:6px;flex:none}.shop2 a{height:30px;padding:0 10px;border-radius:10px;display:grid;place-items:center;background:var(--card2);color:var(--fg);text-decoration:none}.shop2 a b{font-size:12px!important}`;document.head.appendChild(c);})();
+function shopQuery(){const st=(me().styles||[])[0]||'';const g=me().gender==='man'?'men':'women';return `${g} ${st} outfit`.trim();}
+{const _rw49=renderWardrobe;renderWardrobe=function(){_rw49.apply(this,arguments);if(wTab!=='items')return;const b=$('#wBody');if(!b||b.querySelector('.shopBar'))return;
+  const q=shopQuery();b.insertAdjacentHTML('afterbegin',`<div class="shopBar"><span>${t('Shop new clothes')}</span><a href="${esc(shopUrl('shein',q))}" target="_blank" rel="noopener">${SHOP_LOGO.shein}</a><a href="${esc(shopUrl('temu',q))}" target="_blank" rel="noopener">${SHOP_LOGO.temu}</a></div>`);};}
+{const _ob49=openBuy;openBuy=function(id){_ob49.apply(this,arguments);const p=findPost(id);if(!p)return;const sh=$('#sheet');
+  sh.querySelectorAll('a.srow[href*="shein.com"]').forEach(a=>{const tag=decodeURIComponent((a.getAttribute('href').split('/pdsearch/')[1]||'').replace(/\/.*$/,''));a.setAttribute('href',shopUrl('shein',tag));
+    const box=document.createElement('div');box.className='shop2';box.innerHTML=`<a href="${esc(shopUrl('shein',tag))}" target="_blank" rel="noopener">${SHOP_LOGO.shein}</a><a href="${esc(shopUrl('temu',tag))}" target="_blank" rel="noopener">${SHOP_LOGO.temu}</a>`;
+    const row=document.createElement('div');row.className='srow';row.style.cssText='gap:10px';row.innerHTML=`<div class="l"><b>${esc(tag)}</b></div>`;row.appendChild(box);a.replaceWith(row);});};}
+{const _om49=openMissing;openMissing=async function(){await _om49.apply(this,arguments);const sh=$('#sheet');
+  sh.querySelectorAll('a.go[href*="shein.com"]').forEach(a=>{const q=decodeURIComponent((a.getAttribute('href').split('/pdsearch/')[1]||'').replace(/\/.*$/,''));
+    const box=document.createElement('div');box.className='shop2';box.innerHTML=`<a href="${esc(shopUrl('shein',q))}" target="_blank" rel="noopener">${SHOP_LOGO.shein}</a><a href="${esc(shopUrl('temu',q))}" target="_blank" rel="noopener">${SHOP_LOGO.temu}</a>`;a.replaceWith(box);});};}
+(function(){const T={'Shop new clothes':['Acheter des vêtements','לקנות בגדים חדשים','تسوقي ملابس جديدة']};['fr','he','ar'].forEach((c,i)=>{if(window.I18N&&window.I18N[c])for(const k in T)window.I18N[c][k]=T[k][i];});})();
+
+/* ====================== v50: calls — ringtone + glass buttons (gold glass on Gold Style) ====================== */
+(function(){const c=document.createElement('style');c.textContent=`
+#inc .btns button,#call .cbtn.end{background:rgba(255,255,255,.16)!important;-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);border:1px solid rgba(255,255,255,.38)!important;box-shadow:0 8px 28px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.35);color:#fff}
+#inc .btns .no,#call .cbtn.end{background:rgba(239,68,68,.22)!important;border-color:rgba(255,160,160,.45)!important}
+#inc .btns button:active,#call .cbtn.end:active{transform:scale(.94)}
+body.gold #inc{background:linear-gradient(180deg,#0B0A08,#1E1910)}
+body.gold #inc .btns button,body.gold #call .cbtn.end{background:rgba(212,175,55,.2)!important;border-color:rgba(232,194,90,.6)!important;color:#F3D27A;box-shadow:0 8px 28px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,236,170,.35),0 0 18px rgba(212,175,55,.18)}
+body.gold #inc .btns .no,body.gold #call .cbtn.end{background:rgba(212,175,55,.12)!important}
+body.gold #inc .btns svg,body.gold #call .cbtn.end svg{color:#F3D27A;fill:currentColor}`;document.head.appendChild(c);})();
+const RING={ctx:null,mode:null,t:null,gain:null};
+function ringCtx(){try{if(!RING.ctx){const A=window.AudioContext||window.webkitAudioContext;if(!A)return null;RING.ctx=new A();}if(RING.ctx.state==='suspended')RING.ctx.resume();}catch(_){}return RING.ctx;}
+document.addEventListener('pointerdown',()=>{ringCtx();},{once:true,capture:true});
+function ringNote(f,at,dur,vol,type){const c=RING.ctx;const o=c.createOscillator(),g=c.createGain();o.type=type||'sine';o.frequency.value=f;g.gain.setValueAtTime(0,at);g.gain.linearRampToValueAtTime(vol,at+.015);g.gain.exponentialRampToValueAtTime(.0008,at+dur);o.connect(g);g.connect(c.destination);o.start(at);o.stop(at+dur+.05);}
+function ringBar(){const c=RING.ctx;if(!c)return;const n=c.currentTime+.03;
+  if(RING.mode==='in'){const gold=document.body.classList.contains('gold');const notes=gold?[783.99,987.77,1174.66,1567.98,1174.66,987.77]:[659.25,880,1046.5,1318.5,1046.5,880];
+    notes.forEach((f,i)=>{ringNote(f,n+i*.16,.55,.22,'sine');ringNote(f*2,n+i*.16,.25,.05,'triangle');});
+    notes.slice(0,3).forEach((f,i)=>{ringNote(f,n+1.1+i*.16,.55,.2,'sine');});}
+  else{ringNote(440,n,.9,.09,'sine');ringNote(480,n,.9,.07,'sine');}}
+function ringStart(mode){if(RING.mode===mode)return;ringStop();if(!ringCtx())return;RING.mode=mode;ringBar();RING.t=setInterval(ringBar,mode==='in'?2600:3000);}
+function ringStop(){clearInterval(RING.t);RING.t=null;RING.mode=null;}
+setInterval(()=>{const inc=$('#inc'),call=$('#call');
+  const want=inc&&inc.classList.contains('on')?'in':(call&&call.classList.contains('on')&&typeof RC!=='undefined'&&RC.role==='caller'&&RC.pc&&!RC.connected)?'out':null;
+  if(want)ringStart(want);else if(RING.mode)ringStop();},300);
+(function(){const c=document.createElement('style');c.textContent=`
+#inc .sb.yes .k,#inc .sb.no .k{background:rgba(255,255,255,.16)!important;-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);border:1px solid rgba(255,255,255,.4);box-shadow:0 10px 30px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.4)!important}
+#inc .sb.no .k{background:rgba(239,68,68,.24)!important;border-color:rgba(255,170,170,.5)}
+body.gold #inc{background:linear-gradient(180deg,#0B0A08 0%,#15110A 55%,#241B0B 100%)!important}
+body.gold #inc::before{background:radial-gradient(90% 60% at 50% 30%,rgba(212,175,55,.3),transparent 70%)}
+body.gold #inc .avw .av{box-shadow:0 20px 60px rgba(212,175,55,.35)}body.gold #inc .avw i{border-color:rgba(232,194,90,.5)}
+body.gold #inc .sb.yes .k,body.gold #inc .sb.no .k{background:rgba(212,175,55,.2)!important;border-color:rgba(232,194,90,.65);color:#F3D27A;box-shadow:0 10px 30px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,236,170,.4),0 0 22px rgba(212,175,55,.22)!important}
+body.gold #inc .sb.no .k{background:rgba(212,175,55,.1)!important}body.gold #inc .sb .k svg{color:#F3D27A}body.gold #inc .lab{color:rgba(243,210,122,.75)}
+body.gold #call .cbar{border-color:rgba(212,175,55,.35)!important}`;document.head.appendChild(c);})();
