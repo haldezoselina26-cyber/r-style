@@ -1457,8 +1457,8 @@ body.gold #inc .sb.yes .k,body.gold #inc .sb.no .k{background:rgba(212,175,55,.2
 body.gold #inc .sb.no .k{background:rgba(212,175,55,.1)!important}body.gold #inc .sb .k svg{color:#F3D27A}body.gold #inc .lab{color:rgba(243,210,122,.75)}
 body.gold #call .cbar{border-color:rgba(212,175,55,.35)!important}`;document.head.appendChild(c);})();
 
-/* ====================== v51: AI limits checked by the server (free: 3 Ruby questions a day) ====================== */
-const RUBY_FREE51=3;
+/* ====================== v51: AI limits checked by the server (free: 4 Ruby questions a day) ====================== */
+const RUBY_FREE51=4;
 rubyLeft=function(){if(S.vip)return Infinity;if(S.rubyDay.d!==today())S.rubyDay={d:today(),n:0};return Math.max(0,RUBY_FREE51-S.rubyDay.n);};
 {const _ae51=aiErr;aiErr=function(e){if(e&&e.code==='daily_limit'){if(S.rubyDay){S.rubyDay.d=today();S.rubyDay.n=RUBY_FREE51+1;}setTimeout(()=>{try{openVip('ruby');}catch(_){}},900);return t('You used your free Ruby questions for today. Come back tomorrow, or go Gold for unlimited Ruby.');}return _ae51.apply(this,arguments);};}
 (function(){const k='You used your free Ruby questions for today. Come back tomorrow, or go Gold for unlimited Ruby.';const v=['Tu as utilisé tes questions gratuites à Ruby pour aujourd\'hui. Reviens demain, ou passe à Gold pour Ruby illimitée.','השתמשת היום בכל השאלות החינמיות לרובי. אפשר לחזור מחר, או לעבור ל-Gold בשביל רובי בלי הגבלה.','استخدمت أسئلتك المجانية لروبي اليوم. عودي غدًا أو اشتركي في Gold لروبي بلا حدود.'];['fr','he','ar'].forEach((c,i)=>{if(window.I18N&&window.I18N[c])window.I18N[c][k]=v[i];});})();
