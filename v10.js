@@ -248,7 +248,7 @@ $('#composer').addEventListener('submit',()=>{TYsent=0;TYsend(false);});
 
 /* ====================== v14: Ruby + all AI features with Gemini (Supabase Edge Function "ruby") ====================== */
 function blobToDataUrl(b){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.onerror=()=>r(null);fr.readAsDataURL(b);});}
-async function gemCall(body){const {data,error}=await SB.functions.invoke('ruby',{body});if(error)throw error;if(!data||data.error){const e=new Error((data&&data.error)||'AI error');if(data&&data.status===429)e.code='rate_limited';throw e;}return data;}
+async function gemCall(body){const {data,error}=await SB.functions.invoke('ruby',{body});if(error)throw error;if(!data||data.error){const e=new Error((data&&data.error)||'AI error');if(data&&data.quota)e.code='daily_limit';else if(data&&data.status===429)e.code='rate_limited';throw e;}return data;}
 function makeGemini(){const G=async function(msgs,opts={}){const image=opts.images&&opts.images[0]?await blobToDataUrl(opts.images[0]):null;
     const d=await gemCall({messages:(msgs||[]).map(m=>({role:m.role,content:typeof m.content==='string'?m.content:JSON.stringify(m.content)})),image});const text=d.text||'';if(opts.onText)try{opts.onText({text});}catch(_){}return {text};};
   G.json=async(prompt,opts={})=>{const image=opts.images&&opts.images[0]?await blobToDataUrl(opts.images[0]):null;const d=await gemCall({messages:[{role:'user',content:prompt}],image,json:true});
@@ -1075,13 +1075,13 @@ let MXCH=null;function listen32(){if(!(SB&&ME_ID))return;if(MXCH)SB.removeChanne
 /* ====================== v33: Ruby answers fast (streamed word by word) ====================== */
 async function gemStream(body,onText){const {data:{session}}=await SB.auth.getSession();if(!session)throw new Error('Not signed in');
   const r=await fetch(SB_URL+'/functions/v1/ruby',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token,apikey:SB_KEY},body:JSON.stringify(Object.assign({},body,{stream:true}))});
-  const ct=r.headers.get('content-type')||'';if(ct.includes('application/json')){const d=await r.json();if(d.error){const e=new Error(d.error);if(d.status===429)e.code='rate_limited';throw e;}if(onText)onText({text:d.text||''});return d.text||'';}
+  const ct=r.headers.get('content-type')||'';if(ct.includes('application/json')){const d=await r.json();if(d.error){const e=new Error(d.error);if(d.quota)e.code='daily_limit';else if(d.status===429)e.code='rate_limited';throw e;}if(onText)onText({text:d.text||''});return d.text||'';}
   if(!r.ok||!r.body)throw new Error('AI error '+r.status);const rd=r.body.getReader(),dec=new TextDecoder();let text='',last=0;
   for(;;){const {done,value}=await rd.read();if(done)break;text+=dec.decode(value,{stream:true});const now=performance.now();if(onText&&now-last>50){last=now;try{onText({text});}catch(_){}}}
   if(onText)try{onText({text});}catch(_){}return text;}
 {const _mg=makeGemini;makeGemini=function(){const G0=_mg();const G=async function(msgs,opts={}){if(!opts.onText)return G0(msgs,opts);
     const image=opts.images&&opts.images[0]?await blobToDataUrl(opts.images[0]):null;const body={messages:(msgs||[]).map(m=>({role:m.role,content:typeof m.content==='string'?m.content:JSON.stringify(m.content)})),image};
-    try{const text=await gemStream(body,opts.onText);return {text};}catch(e){if(e.code==='rate_limited')throw e;return G0(msgs,opts);}};
+    try{const text=await gemStream(body,opts.onText);return {text};}catch(e){if(e.code==='rate_limited'||e.code==='daily_limit')throw e;return G0(msgs,opts);}};
   Object.assign(G,G0);G.json=G0.json;G.limits=G0.limits;G.gemini=true;return G;};
  if(AI&&AI.gemini){AI=null;enableGemini();}}
 /* v33.1 keep Ruby awake: a tiny call when the app opens and when Ruby is opened (no waiting on the first question) */
@@ -1456,3 +1456,9 @@ body.gold #inc .avw .av{box-shadow:0 20px 60px rgba(212,175,55,.35)}body.gold #i
 body.gold #inc .sb.yes .k,body.gold #inc .sb.no .k{background:rgba(212,175,55,.2)!important;border-color:rgba(232,194,90,.65);color:#F3D27A;box-shadow:0 10px 30px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,236,170,.4),0 0 22px rgba(212,175,55,.22)!important}
 body.gold #inc .sb.no .k{background:rgba(212,175,55,.1)!important}body.gold #inc .sb .k svg{color:#F3D27A}body.gold #inc .lab{color:rgba(243,210,122,.75)}
 body.gold #call .cbar{border-color:rgba(212,175,55,.35)!important}`;document.head.appendChild(c);})();
+
+/* ====================== v51: AI limits checked by the server (free: 3 Ruby questions a day) ====================== */
+const RUBY_FREE51=3;
+rubyLeft=function(){if(S.vip)return Infinity;if(S.rubyDay.d!==today())S.rubyDay={d:today(),n:0};return Math.max(0,RUBY_FREE51-S.rubyDay.n);};
+{const _ae51=aiErr;aiErr=function(e){if(e&&e.code==='daily_limit'){if(S.rubyDay){S.rubyDay.d=today();S.rubyDay.n=RUBY_FREE51+1;}setTimeout(()=>{try{openVip('ruby');}catch(_){}},900);return t('You used your free Ruby questions for today. Come back tomorrow, or go Gold for unlimited Ruby.');}return _ae51.apply(this,arguments);};}
+(function(){const k='You used your free Ruby questions for today. Come back tomorrow, or go Gold for unlimited Ruby.';const v=['Tu as utilisé tes questions gratuites à Ruby pour aujourd\'hui. Reviens demain, ou passe à Gold pour Ruby illimitée.','השתמשת היום בכל השאלות החינמיות לרובי. אפשר לחזור מחר, או לעבור ל-Gold בשביל רובי בלי הגבלה.','استخدمت أسئلتك المجانية لروبي اليوم. عودي غدًا أو اشتركي في Gold لروبي بلا حدود.'];['fr','he','ar'].forEach((c,i)=>{if(window.I18N&&window.I18N[c])window.I18N[c][k]=v[i];});})();
